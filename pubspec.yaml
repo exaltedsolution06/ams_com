@@ -1,0 +1,158 @@
+name: ams_company_admin
+description: AMS Company Admin - manage your companies' apartments, subscriptions, and Apartment Admins.
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # HTTP & API
+  http: ^1.2.0
+  dio: ^5.4.0
+
+  # State Management
+  provider: ^6.1.2
+  flutter_riverpod: ^3.3.2
+
+  # Auth & Storage
+  flutter_secure_storage: ^10.3.1
+  shared_preferences: ^2.2.2
+
+  # JWT
+  dart_jsonwebtoken: ^3.1.1
+
+  # UI
+  cupertino_icons: ^1.0.6
+  flutter_svg: ^2.0.10
+  cached_network_image: ^3.3.1
+  shimmer: ^3.0.0
+  lottie: ^3.1.0
+
+  # Navigation
+  go_router: ^13.2.0
+
+  # Forms & Validation
+  flutter_form_builder: ^10.3.0+2
+  form_builder_validators: ^11.1.2
+
+  # Payments
+  razorpay_flutter: ^1.3.7
+  # Cashfree Easy Split "Pay Online" popup for resident bill / one-time-charge /
+  # wallet payments - mirrors the website's cashfree.checkout({redirectTarget:'_modal'})
+  # via Cashfree's official Flutter SDK (see lib/services/payment_service.dart).
+  # Correct package name is flutter_cashfree_pg_sdk (NOT cashfree_pg - that was
+  # wrong in an earlier version of this file and fails to resolve). Confirmed
+  # against https://pub.dev/packages/flutter_cashfree_pg_sdk - latest is 2.4.0+52.
+  flutter_cashfree_pg_sdk: ^2.4.0+52
+
+  # QR Code
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^7.2.0
+
+  # File & Image
+  image_picker: ^1.0.7
+  emoji_picker_flutter: ^4.3.0
+  package_info_plus: ^8.0.0
+  file_picker: ^10.3.3
+
+  # Notifications
+  firebase_core: ^4.11.0
+  firebase_messaging: ^16.4.1
+  flutter_local_notifications: ^22.0.1
+
+  # Utils
+  intl: ^0.20.2
+  url_launcher: ^6.2.6
+  share_plus: ^12.0.0
+
+  # Voice Commands (all free / no API key - see lib/services/voice_command_service.dart)
+  speech_to_text: ^7.0.0      # mobile: on-device/OS speech recognizer. web: wraps the browser's built-in Web Speech API automatically.
+  # NOTE: fuzzy matching is a small self-contained Dice-coefficient implementation
+  # inside voice_command_service.dart (no string_similarity dependency) - couldn't
+  # verify that package's exact API surface from this sandbox (no pub.dev access),
+  # so a hand-rolled version was used to guarantee it compiles. Same algorithm the
+  # package itself uses; swap in `string_similarity: ^2.0.0` later if you prefer.
+
+  # Community Meeting (Phase 1: Default/Free provider = public Jitsi via
+  # meet.jit.si). Embeds the meeting as a web view rather than the native
+  # Jitsi Meet SDK - this project's zip doesn't include android/ios native
+  # folders, so there's nowhere to add the SDK's native Podfile/Gradle
+  # config from here. See lib/screens/community_meeting/meeting_room_screen.dart
+  # for the exact native permission entries you'll need to add once this
+  # is merged into your real project (camera/mic for Android + iOS).
+  webview_flutter: ^4.9.0
+  # Needed explicitly (not just transitively via webview_flutter) so we can
+  # import AndroidWebViewController directly for the camera/mic permission
+  # grant in meeting_room_screen.dart. Run `flutter pub add
+  # webview_flutter_android` in your real project instead of trusting this
+  # pinned version - pub will resolve whatever's compatible with the
+  # webview_flutter version actually installed there.
+  webview_flutter_android: ^3.16.0
+
+  # Explicit "please allow camera & microphone" prompt the very first time
+  # someone taps into a Meet Live room (both Jitsi and ZegoCloud paths -
+  # see community_meeting_screen.dart's _ensureCallPermissions()). Without
+  # this, Android's WebView (Jitsi path) silently denies getUserMedia if
+  # the OS-level runtime permission was never granted, and ZegoCloud's own
+  # internal request doesn't give control over the explanatory copy shown
+  # beforehand. permission_handler reads the same AndroidManifest.xml
+  # CAMERA/RECORD_AUDIO entries and Info.plist usage-description keys
+  # already documented in meeting_room_screen.dart - it doesn't need any
+  # additional native config of its own beyond those.
+  permission_handler: ^11.3.1
+
+  # Community Meeting — Premium provider (ZegoCloud). Native in-app call UI
+  # (PIP, mute/camera controls, participant grid) rather than a web view -
+  # see lib/screens/community_meeting/zego_meeting_room_screen.dart. Joins
+  # with a server-minted Token04 (App\Services\ZegoTokenService on the
+  # backend), never a raw ServerSecret/appSign on-device. Same "no
+  # android/ios folders in this zip" caveat as webview_flutter above -
+  # native config below still needs adding by hand:
+  #   Android (android/app/build.gradle): minSdkVersion 21+,
+  #     compileSdkVersion 33+ (see package's own setup docs - versions
+  #     drift over time, so check the installed package version's README).
+  #   Android (AndroidManifest.xml): CAMERA, RECORD_AUDIO,
+  #     MODIFY_AUDIO_SETTINGS, BLUETOOTH, INTERNET, ACCESS_NETWORK_STATE,
+  #     ACCESS_WIFI_STATE permissions (mirrors the Jitsi ones above, plus
+  #     BLUETOOTH/network for the native RTC engine).
+  #   iOS (Info.plist): NSCameraUsageDescription, NSMicrophoneUsageDescription
+  #     (can reuse the same strings as the Jitsi ones above).
+  # Run `flutter pub add zego_uikit_prebuilt_call` in your real project
+  # instead of trusting this pinned version.
+  #
+  # ── SIZE TOGGLE ──────────────────────────────────────────────────────
+  # This is the single heaviest dependency in this app (native WebRTC-style
+  # engine, bundled per-CPU-architecture) - it's the main reason the APK
+  # crossed 200MB. zego_meeting_room_screen.dart never needs to change
+  # either way; only ONE of the two entries below should be active at a
+  # time (comment one, uncomment the other), then `flutter pub get` +
+  # rebuild:
+  #
+  #   FULL (Premium meetings work, ~150-200MB+ heavier):
+  #     zego_uikit_prebuilt_call: ^4.24.2
+  #
+  #   LITE (no native SDK at all - Premium meetings show a "not available
+  #   in this build" screen instead of connecting; local stub package
+  #   lives at local_packages/zego_uikit_prebuilt_call_stub):
+  #     zego_uikit_prebuilt_call:
+  #       path: local_packages/zego_uikit_prebuilt_call_stub
+  zego_uikit_prebuilt_call:
+    path: local_packages/zego_uikit_prebuilt_call_stub
+  # zego_uikit_prebuilt_call: ^4.24.2
+  
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.8
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/

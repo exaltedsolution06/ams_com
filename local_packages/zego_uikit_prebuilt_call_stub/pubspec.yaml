@@ -1,0 +1,23 @@
+name: zego_uikit_prebuilt_call
+description: >
+  Local LITE stand-in for zego_uikit_prebuilt_call. Provides the same
+  class/constructor surface the app code calls (ZegoUIKitPrebuiltCall,
+  ZegoUIKitPrebuiltCallConfig, ZegoUIKitPrebuiltCallEvents) without
+  bundling the real native WebRTC SDK, so the app builds and runs at a
+  fraction of the size with Premium (ZegoCloud) meetings showing a
+  "not available in this build" screen instead of connecting.
+  Swap this path dependency for the real `zego_uikit_prebuilt_call: ^4.24.2`
+  pub.dev package (see pubspec.yaml's SIZE TOGGLE comment) to enable
+  real Premium meetings.
+version: 0.0.1
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
