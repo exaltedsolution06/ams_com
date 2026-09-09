@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/api_service.dart';
-import '../../services/auth_service.dart';
 import '../../services/branding_service.dart';
 import '../../services/language_service.dart';
 import '../../services/drawer_state.dart';
@@ -55,17 +54,6 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
         ]),
       ),
     ];
-  }
-
-  Future<void> _enterApartment(Map apt) async {
-    await AuthService().setSelectedApartmentId(apt['id'] as int);
-    // Refresh branding for this specific apartment - GET /branding now
-    // carries this apartment's apartment_id (see ApiService._withApartmentContext),
-    // so this picks up its actual colors/logo/disabled_modules instead of
-    // whatever was cached from login (generic, since a company_admin has no
-    // apartment_id of their own) or a previously-viewed apartment.
-    await BrandingService.load();
-    if (mounted) context.go('/admin/dashboard');
   }
 
   @override
@@ -196,8 +184,6 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                                 leading: CircleAvatar(backgroundColor: primary.withOpacity(0.12), child: Icon(Icons.apartment, color: primary)),
                                 title: Text(apt['name'] as String? ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
                                 subtitle: Text('${apt['flats_count'] ?? 0} ${LanguageService.t('flats')} · ${apt['users_count'] ?? 0} ${LanguageService.t('residents')}'),
-                                trailing: const Icon(Icons.chevron_right),
-                                onTap: () => _enterApartment(apt as Map),
                               ),
                             )),
                     ]),
