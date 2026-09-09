@@ -97,6 +97,12 @@ class MenuConfigService {
 
   static IconData _iconFor(String key) => _icons[key] ?? Icons.apps_rounded;
 
+  /// Public lookup for screens that need the same key->icon mapping outside
+  /// the resolved quick-action/bottom-nav flow (e.g. the App Menu Settings
+  /// editor, which shows every catalog item - not just the ones already
+  /// resolved for the current user - while an admin is picking).
+  static IconData iconFor(String key) => _iconFor(key);
+
   static List<QuickActionItem> _quickFromJson(List data) => data.map((e) {
     final m = e as Map<String, dynamic>;
     return QuickActionItem(

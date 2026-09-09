@@ -186,6 +186,24 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
     }
   }
 
+  Future<void> _delete(Map apt) async {
+    final confirmed = await AmsDialog.confirm(
+      context,
+      title: LanguageService.t('delete_apartment'),
+      message: LanguageService.t('delete_apartment_confirm'),
+      confirmText: LanguageService.t('delete'),
+      icon: Icons.delete_outline,
+      danger: true,
+    );
+    if (confirmed != true) return;
+    try {
+      await ApiService().delete('/company/apartments/${apt['id']}');
+      _load();
+    } catch (e) {
+      if (mounted) AmsDialog.info(context, title: LanguageService.t('error'), message: e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final primary = BrandingService.primary;
@@ -216,20 +234,49 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
                           itemBuilder: (ctx, i) {
                             final a = _apartments[i];
                             final sub = a['active_subscription'] as Map?;
+                            final code = a['apartment_code'] as String?;
+                            final address = [a['address'], a['city']].where((v) => v != null && (v as String).isNotEmpty).join(', ');
                             return Card(
                               margin: const EdgeInsets.only(bottom: 8),
                               elevation: 0,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: Colors.grey.shade200)),
-                              child: ListTile(
-                                leading: CircleAvatar(backgroundColor: primary.withOpacity(0.12), child: Icon(Icons.apartment, color: primary)),
-                                title: Text(a['name'] as String? ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
-                                subtitle: Text('${a['flats_count'] ?? 0} ${LanguageService.t('flats')} · ${a['users_count'] ?? 0} ${LanguageService.t('residents')}'
-                                    '${sub != null ? ' · ${(sub['plan'] as Map?)?['name'] ?? ''}' : ' · ${LanguageService.t('no_plan')}'}'),
-                                onTap: () => _showForm(apartment: a as Map),
-                                trailing: GestureDetector(
-                                  onTap: () => _toggleActive(a as Map),
-                                  child: Icon(Icons.circle, size: 12, color: (a['is_active'] == true) ? Colors.green : Colors.grey),
-                                ),
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(4, 6, 12, 6),
+                                child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                                  Expanded(
+                                    child: ListTile(
+                                      leading: CircleAvatar(backgroundColor: primary.withOpacity(0.12), child: Icon(Icons.apartment, color: primary)),
+                                      title: Row(children: [
+                                        Flexible(child: Text(a['name'] as String? ?? '', style: const TextStyle(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
+                                        if (code != null && code.isNotEmpty) ...[
+                                          const SizedBox(width: 6),
+                                          Text('· $code', style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                                        ],
+                                      ]),
+                                      subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                        if (address.isNotEmpty)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 2, bottom: 2),
+                                            child: Text(address, style: const TextStyle(fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                          ),
+                                        Text(
+                                          '${a['flats_count'] ?? 0} ${LanguageService.t('flats')} · ${a['residents_count'] ?? 0} ${LanguageService.t('residents')} · ${a['towers_count'] ?? 0} ${LanguageService.t('towers')}'
+                                          '${sub != null ? ' · ${(sub['plan'] as Map?)?['name'] ?? ''}' : ' · ${LanguageService.t('no_plan')}'}',
+                                        ),
+                                      ]),
+                                      onTap: () => _showForm(apartment: a as Map),
+                                      trailing: GestureDetector(
+                                        onTap: () => _toggleActive(a as Map),
+                                        child: Icon(Icons.circle, size: 12, color: (a['is_active'] == true) ? Colors.green : Colors.grey),
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                                    tooltip: LanguageService.t('delete_apartment'),
+                                    onPressed: () => _delete(a as Map),
+                                  ),
+                                ]),
                               ),
                             );
                           },

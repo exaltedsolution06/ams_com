@@ -108,7 +108,7 @@ class VoiceCommandCatalog {
     VoiceNavCommand(key: 'plans', labelKey: 'my_plans', route: '/company/plans'),
     VoiceNavCommand(key: 'subscriptions', labelKey: 'subscriptions', route: '/company/subscriptions'),
     VoiceNavCommand(key: 'report', labelKey: 'company_report', route: '/company/report'),
-    VoiceNavCommand(key: 'company_profile', labelKey: 'company_profile', route: '/company/profile'),
+    VoiceNavCommand(key: 'company_profile', labelKey: 'my_company', route: '/company/profile'),
     VoiceNavCommand(key: 'profile', labelKey: 'profile', route: '/profile'),
   ];
 

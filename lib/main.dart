@@ -91,6 +91,8 @@ import 'screens/company/company_report_screen.dart';
 import 'screens/company/company_plans_screen.dart';
 import 'screens/company/company_apt_admins_screen.dart';
 import 'screens/company/company_apartments_screen.dart';
+import 'screens/company/company_menu_settings_screen.dart';
+import 'screens/company/company_menu_settings_edit_screen.dart';
 import 'screens/company/company_profile_screen.dart';
 import 'screens/company/company_subscriptions_screen.dart';
 import 'screens/company/company_bank_details_screen.dart';
@@ -288,6 +290,11 @@ final router = GoRouter(
     GoRoute(path: '/company/plans',        builder: (_, __) => const CompanyPlansScreen()),
     GoRoute(path: '/company/apt-admins',   builder: (_, __) => const CompanyAptAdminsScreen()),
     GoRoute(path: '/company/apartments',   builder: (_, __) => const CompanyApartmentsScreen()),
+    GoRoute(path: '/company/menu-settings', builder: (_, __) => const CompanyMenuSettingsScreen()),
+    GoRoute(path: '/company/menu-settings/:id', builder: (_, state) => CompanyMenuSettingsEditScreen(
+      apartmentId: int.parse(state.pathParameters['id']!),
+      apartmentName: state.extra as String?,
+    )),
     GoRoute(path: '/company/profile',      builder: (_, __) => const CompanyProfileScreen()),
     GoRoute(path: '/company/subscriptions',builder: (_, __) => const CompanySubscriptionsScreen()),
     GoRoute(path: '/company/bank-details', builder: (_, __) => const CompanyBankDetailsScreen()),
