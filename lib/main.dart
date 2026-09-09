@@ -96,42 +96,88 @@ import 'screens/company/company_menu_settings_edit_screen.dart';
 import 'screens/company/company_profile_screen.dart';
 import 'screens/company/company_subscriptions_screen.dart';
 import 'screens/company/company_bank_details_screen.dart';
+import 'screens/splash/splash_screen.dart';
 
-/// Set once at startup (before runApp) - non-null means a mandatory
-/// update is pending. See AppUpdateService for the version-comparison
-/// logic and ForceUpdateScreen for the blocking screen this routes to.
+/// Set once at startup (before the router builds) - non-null means a
+/// mandatory update is pending. See AppUpdateService for the
+/// version-comparison logic and ForceUpdateScreen for the blocking
+/// screen this routes to.
 UpdateInfo? _mandatoryUpdate;
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await LanguageService.loadSaved();
-  await TextScaleService.loadSaved();
-  await BrandingService.load();
-  await FcmService.init();
+  runApp(const _AppBootstrap());
+}
 
-  _mandatoryUpdate = await AppUpdateService.checkForMandatoryUpdate();
-  if (_mandatoryUpdate != null) {
-    // Force logout: whoever was signed in must see the update screen
-    // first, on every app open, until they update.
-    await AuthService().logout();
-  } else {
-    await MaintenanceService.check();
-    final blockedByMaintenance = MaintenanceService.current?.enabled == true;
+/// Shown first, in place of `ApartmentManagementApp`, so the splash
+/// graphic + loader is what the user sees for the entire startup
+/// sequence below - checking for a mandatory update, maintenance mode,
+/// and the current session - instead of a blank/frozen frame while
+/// that work happens off in `main()` before anything is drawn.
+class _AppBootstrap extends StatefulWidget {
+  const _AppBootstrap();
+  @override
+  State<_AppBootstrap> createState() => _AppBootstrapState();
+}
 
-    if (blockedByMaintenance) {
-      // Unlike the full app, there's no Super Admin role in this build to
-      // exempt from Maintenance Mode - a Company Admin session is always
-      // signed out immediately, same as everyone else.
-      await AuthService().logout();
-    } else if (await AuthService().isLoggedIn()) {
-      // If the user is already logged in (app restart, not a fresh login),
-      // re-register the current token in case it rotated while the app was
-      // closed — FCM tokens aren't guaranteed stable across reinstalls/restores.
-      FcmService.registerToken();
-    }
+class _AppBootstrapState extends State<_AppBootstrap> {
+  bool _ready = false;
+  String _status = 'Loading…';
+
+  @override
+  void initState() {
+    super.initState();
+    _init();
   }
 
-  runApp(const ApartmentManagementApp());
+  Future<void> _init() async {
+    await LanguageService.loadSaved();
+    await TextScaleService.loadSaved();
+    await BrandingService.load();
+    await FcmService.init();
+
+    setState(() => _status = 'Checking for updates…');
+    _mandatoryUpdate = await AppUpdateService.checkForMandatoryUpdate();
+    if (_mandatoryUpdate != null) {
+      // Force logout: whoever was signed in must see the update screen
+      // first, on every app open, until they update.
+      await AuthService().logout();
+    } else {
+      setState(() => _status = 'Checking session…');
+      await MaintenanceService.check();
+      final blockedByMaintenance = MaintenanceService.current?.enabled == true;
+
+      if (blockedByMaintenance) {
+        // Unlike the full app, there's no Super Admin role in this build to
+        // exempt from Maintenance Mode - a Company Admin session is always
+        // signed out immediately, same as everyone else.
+        await AuthService().logout();
+      } else if (await AuthService().isLoggedIn()) {
+        // If the user is already logged in (app restart, not a fresh login),
+        // re-register the current token in case it rotated while the app was
+        // closed — FCM tokens aren't guaranteed stable across reinstalls/restores.
+        FcmService.registerToken();
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _ready = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_ready) {
+      // No branding/theme yet at this point (that's one of the things
+      // `_init` above is loading), so this MaterialApp only exists to
+      // give SplashScreen a Directionality/Theme to sit inside — it
+      // deliberately doesn't share ApartmentManagementApp's ThemeData.
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: SplashScreen(message: _status),
+      );
+    }
+    return const ApartmentManagementApp();
+  }
 }
 
 // See navigatorKey usage below.
