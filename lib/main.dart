@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'services/auth_service.dart';
 import 'services/branding_service.dart';
@@ -130,7 +129,7 @@ void main() async {
     }
   }
 
-  runApp(const ProviderScope(child: ApartmentManagementApp()));
+  runApp(const ApartmentManagementApp());
 }
 
 // See navigatorKey usage below.
