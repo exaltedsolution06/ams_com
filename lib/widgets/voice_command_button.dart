@@ -482,16 +482,16 @@ class _VoiceCommandButtonState extends State<VoiceCommandButton> {
         // descendant of it). In debug that throws a clear assert; in a
         // release build the assert is stripped and it instead silently
         // fails via a null-check, which is exactly why "open dashboard"
-        // showed the snackbar but never actually navigated. Calling go()
-        // on the top-level `router` object directly sidesteps context
-        // lookup entirely.
+        // showed the snackbar but never actually navigated. Calling
+        // go()/push() on the top-level `router` object directly (via
+        // _navigate() below) sidesteps context lookup entirely.
         // TEMP DIAGNOSTIC (safe to remove once navigation is confirmed
         // working): logs to `flutter run`'s console so you can see whether
         // this line is actually reached, and surfaces any exception go()
         // throws instead of it disappearing silently.
         dev.log('Voice nav -> ${intent.route}', name: 'VoiceCommandButton');
         try {
-          router.go(intent.route);
+          _navigate(intent.route);
         } catch (e, st) {
           dev.log('router.go failed: $e', name: 'VoiceCommandButton', error: e, stackTrace: st);
         }
@@ -618,7 +618,24 @@ class _VoiceCommandButtonState extends State<VoiceCommandButton> {
     if (result == '__retry__') {
       await _start();
     } else {
-      router.go(result);
+      _navigate(result);
+    }
+  }
+
+  /// Same push-vs-go rule the drawer menu already follows (see
+  /// AppDrawer._MenuEntry.tile push:): dashboard/home routes use go() to
+  /// reset the stack, everything else uses push() so the destination gets
+  /// a real back-stack entry. Voice navigation used to always call
+  /// router.go(), which *replaces* the current route instead of stacking
+  /// on top of it - go_router only draws the AppBar back arrow when
+  /// there's something to pop, so a voice-launched screen never got one
+  /// even though the exact same screen reached via a menu tap did.
+  void _navigate(String route) {
+    final isHome = route == '/dashboard' || route.endsWith('/dashboard');
+    if (isHome) {
+      router.go(route);
+    } else {
+      router.push(route);
     }
   }
 

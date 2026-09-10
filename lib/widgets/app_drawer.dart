@@ -255,10 +255,15 @@ class AppDrawer extends StatelessWidget {
     _MenuEntry.tile(icon: Icons.sell_outlined,        label: LanguageService.t('my_plans'),          route: '/company/plans',     push: true),
     _MenuEntry.tile(icon: Icons.receipt_long,         label: LanguageService.t('subscriptions'),     route: '/company/subscriptions', push: true),
     _MenuEntry.tile(icon: Icons.list_alt_outlined,    label: LanguageService.t('app_menu_settings'), route: '/company/menu-settings', push: true),
+    _MenuEntry.tile(icon: Icons.badge_outlined,       label: LanguageService.t('referrer_commissions'), route: '/company/referrer-commissions', push: true),
+    _MenuEntry.tile(icon: Icons.send_outlined,        label: LanguageService.t('send_email'),        route: '/company/send-email', push: true),
     _MenuEntry.section('REPORTS'),
     _MenuEntry.tile(icon: Icons.bar_chart_outlined,   label: LanguageService.t('company_report'),    route: '/company/report',    push: true),
     _MenuEntry.section('SETTINGS'),
     _MenuEntry.tile(icon: Icons.account_balance_outlined, label: LanguageService.t('bank_details'), route: '/company/bank-details', push: true),
+    _MenuEntry.section('ACCOUNT'),
+    _MenuEntry.tile(icon: Icons.credit_card,          label: LanguageService.t('my_company_subscription'), route: '/company/subscription', push: true),
+    _MenuEntry.tile(icon: Icons.support_agent_outlined, label: LanguageService.t('support_tickets'),  route: '/admin/tickets', push: true),
   ];
 
   // ── COMPANY ADMIN: inside a specific apartment - same as an

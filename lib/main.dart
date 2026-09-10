@@ -96,6 +96,9 @@ import 'screens/company/company_menu_settings_edit_screen.dart';
 import 'screens/company/company_profile_screen.dart';
 import 'screens/company/company_subscriptions_screen.dart';
 import 'screens/company/company_bank_details_screen.dart';
+import 'screens/company/company_referrer_commissions_screen.dart';
+import 'screens/company/company_send_email_screen.dart';
+import 'screens/company/company_subscription_screen.dart';
 import 'screens/splash/splash_screen.dart';
 
 /// Set once at startup (before the router builds) - non-null means a
@@ -344,6 +347,9 @@ final router = GoRouter(
     GoRoute(path: '/company/profile',      builder: (_, __) => const CompanyProfileScreen()),
     GoRoute(path: '/company/subscriptions',builder: (_, __) => const CompanySubscriptionsScreen()),
     GoRoute(path: '/company/bank-details', builder: (_, __) => const CompanyBankDetailsScreen()),
+    GoRoute(path: '/company/referrer-commissions', builder: (_, __) => const CompanyReferrerCommissionsScreen()),
+    GoRoute(path: '/company/send-email',   builder: (_, __) => const CompanySendEmailScreen()),
+    GoRoute(path: '/company/subscription', builder: (_, __) => const CompanySubscriptionScreen()),
   ],
 );
 
