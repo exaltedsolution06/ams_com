@@ -19,6 +19,11 @@ class AdminResidentsScreen extends StatefulWidget {
 class _AdminResidentsScreenState extends State<AdminResidentsScreen> {
   List _residents = [];
   List _flats     = [];
+  // Standalone Apartment Admins (added by Super Admin, not yet also a
+  // resident) that Add Resident can link to a flat instead of re-entering
+  // their email/phone - see _showAddResident()'s "Link Existing Apartment
+  // Admin" dropdown.
+  List _linkableAdmins = [];
   bool _loading   = true;
   String _search  = '';
   final _searchCtrl = TextEditingController();
@@ -41,9 +46,11 @@ class _AdminResidentsScreenState extends State<AdminResidentsScreen> {
       final api   = ApiService();
       final res   = await api.get('/admin/residents?search=$_search');
       final fRes  = await api.get('/admin/flats?status=vacant&include_ownership_change=1');
+      final aRes  = await api.get('/admin/residents/linkable-apartment-admins');
       setState(() {
         _residents = res['data']['data'] ?? res['data'] ?? [];
         _flats     = fRes['data'] ?? [];
+        _linkableAdmins = aRes['data'] ?? [];
         _loading   = false;
       });
     } catch (_) {
@@ -62,6 +69,11 @@ class _AdminResidentsScreenState extends State<AdminResidentsScreen> {
     String occupancyType = 'owner';
     bool isDualRoleAdmin = false;
     String? formError;
+    // "Link Existing Apartment Admin" - picking one autofills+locks
+    // name/email/phone (this person already has a login) and skips the
+    // password/"Mark as Apartment Admin" fields, instead of trying to
+    // create a second account with the same email/phone.
+    Map? linkedAdmin;
 
     showModalBottomSheet(
       context: context,
@@ -83,10 +95,44 @@ class _AdminResidentsScreenState extends State<AdminResidentsScreen> {
                 onClose: () => Navigator.pop(ctx),
               ),
               FormErrorBanner(message: formError),
+              if (_linkableAdmins.isNotEmpty) ...[
+                AppFieldShell(
+                  accent: BrandingService.secondary,
+                  child: DropdownButtonFormField<Map>(
+                    value: linkedAdmin,
+                    isExpanded: true,
+                    decoration: appFieldDecoration(label: LanguageService.t('link_existing_apartment_admin'), icon: Icons.admin_panel_settings_outlined, accent: BrandingService.secondary),
+                    items: [
+                      DropdownMenuItem<Map>(value: null, child: Text(LanguageService.t('none_new_resident'))),
+                      ..._linkableAdmins.map<DropdownMenuItem<Map>>((a) => DropdownMenuItem(
+                        value: a as Map,
+                        child: Text('${a['name']} (${a['email'] ?? a['phone'] ?? ''})', overflow: TextOverflow.ellipsis),
+                      )),
+                    ],
+                    onChanged: (v) => setS(() {
+                      linkedAdmin = v;
+                      if (v != null) {
+                        nameCtrl.text  = v['name']  ?? '';
+                        emailCtrl.text = v['email'] ?? '';
+                        phoneCtrl.text = v['phone'] ?? '';
+                        isDualRoleAdmin = false;
+                      }
+                    }),
+                  ),
+                ),
+                if (linkedAdmin != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(LanguageService.t('linked_admin_keeps_login'),
+                        style: TextStyle(fontSize: 11.5, color: Colors.grey[600])),
+                  ),
+                const SizedBox(height: 14),
+              ],
               AppFieldShell(
                 accent: BrandingService.primary,
                 child: TextFormField(
                   controller: nameCtrl,
+                  enabled: linkedAdmin == null,
                   decoration: appFieldDecoration(label: LanguageService.t('full_name'), icon: Icons.person_outline, accent: BrandingService.primary),
                   validator: (v) => v!.isEmpty ? 'Required' : null,
                 ),
@@ -96,9 +142,10 @@ class _AdminResidentsScreenState extends State<AdminResidentsScreen> {
                 accent: BrandingService.secondary,
                 child: TextFormField(
                   controller: emailCtrl,
+                  enabled: linkedAdmin == null,
                   keyboardType: TextInputType.emailAddress,
                   decoration: appFieldDecoration(label: LanguageService.t('email'), icon: Icons.email_outlined, accent: BrandingService.secondary),
-                  validator: (v) => v!.isEmpty ? 'Required' : null,
+                  validator: (v) => linkedAdmin != null ? null : (v!.isEmpty ? 'Required' : null),
                 ),
               ),
               const SizedBox(height: 14),
@@ -106,9 +153,10 @@ class _AdminResidentsScreenState extends State<AdminResidentsScreen> {
                 accent: BrandingService.primary,
                 child: TextFormField(
                   controller: phoneCtrl,
+                  enabled: linkedAdmin == null,
                   keyboardType: TextInputType.phone,
                   decoration: appFieldDecoration(label: LanguageService.t('phone'), icon: Icons.phone_outlined, accent: BrandingService.primary),
-                  validator: (v) => v!.isEmpty ? 'Required' : null,
+                  validator: (v) => linkedAdmin != null ? null : (v!.isEmpty ? 'Required' : null),
                 ),
               ),
               const SizedBox(height: 14),
@@ -156,24 +204,26 @@ class _AdminResidentsScreenState extends State<AdminResidentsScreen> {
                   onChanged: (v) => setS(() => occupancyType = v!),
                 ),
               ),
-              const SizedBox(height: 14),
-              AppFieldShell(
-                accent: BrandingService.secondary,
-                child: TextFormField(
-                  controller: passCtrl,
-                  obscureText: true,
-                  decoration: appFieldDecoration(label: LanguageService.t('set_password'), icon: Icons.lock_outlined, accent: BrandingService.secondary),
-                  validator: (v) => (v == null || v.length < 6) ? 'Min 6 characters' : null,
+              if (linkedAdmin == null) ...[
+                const SizedBox(height: 14),
+                AppFieldShell(
+                  accent: BrandingService.secondary,
+                  child: TextFormField(
+                    controller: passCtrl,
+                    obscureText: true,
+                    decoration: appFieldDecoration(label: LanguageService.t('set_password'), icon: Icons.lock_outlined, accent: BrandingService.secondary),
+                    validator: (v) => (v == null || v.length < 6) ? 'Min 6 characters' : null,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              SwitchListTile(
-                value: isDualRoleAdmin,
-                onChanged: (v) => setS(() => isDualRoleAdmin = v),
-                contentPadding: EdgeInsets.zero,
-                title: Text(LanguageService.t('mark_as_apartment_admin'), style: TextStyle(fontSize: 14)),
-                subtitle: Text(LanguageService.t('not_permanent_can_be_handed_to_someone_else_a'), style: TextStyle(fontSize: 11)),
-              ),
+                const SizedBox(height: 4),
+                SwitchListTile(
+                  value: isDualRoleAdmin,
+                  onChanged: (v) => setS(() => isDualRoleAdmin = v),
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(LanguageService.t('mark_as_apartment_admin'), style: TextStyle(fontSize: 14)),
+                  subtitle: Text(LanguageService.t('not_permanent_can_be_handed_to_someone_else_a'), style: TextStyle(fontSize: 11)),
+                ),
+              ],
               const SizedBox(height: 20),
               ElevatedButton.icon(
                 icon: const Icon(Icons.person_add_alt_1_outlined),
@@ -189,14 +239,15 @@ class _AdminResidentsScreenState extends State<AdminResidentsScreen> {
                   if (!formKey.currentState!.validate()) return;
                   try {
                     await ApiService().post('/admin/residents', {
-                      'name':           nameCtrl.text.trim(),
-                      'email':          emailCtrl.text.trim(),
-                      'phone':          phoneCtrl.text.trim(),
+                      if (linkedAdmin != null) 'existing_admin_user_id': linkedAdmin!['id'],
+                      if (linkedAdmin == null) 'name':     nameCtrl.text.trim(),
+                      if (linkedAdmin == null) 'email':    emailCtrl.text.trim(),
+                      if (linkedAdmin == null) 'phone':    phoneCtrl.text.trim(),
+                      if (linkedAdmin == null) 'password': passCtrl.text,
+                      if (linkedAdmin == null) 'is_apartment_admin': isDualRoleAdmin,
                       'flat_id':        int.parse(selectedFlatId!),
                       'additional_flat_ids': additionalFlatIds.map((e) => int.parse(e)).toList(),
                       'occupancy_type': occupancyType,
-                      'password':       passCtrl.text,
-                      'is_apartment_admin': isDualRoleAdmin,
                     });
                     if (ctx.mounted) Navigator.pop(ctx);
                     _load();
