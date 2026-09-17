@@ -71,27 +71,35 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         if (fcmToken != null) 'fcm_token': fcmToken,
       }, auth: false);
 
-      // Multi-apartment identity (Resident/Apartment Admin only) - the
-      // same login matched more than one apartment's account. Never shown
-      // for anyone with just one apartment - see AuthController::login().
-      if (res['multiple_accounts'] == true) {
-        final accounts = (res['accounts'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        if (!mounted) return;
-        final chosen = await _showChooseApartmentSheet(accounts);
-        if (chosen == null) { setState(() => _loading = false); return; } // dismissed
-
-        // The chosen apartment's password isn't necessarily the one just
-        // typed above (accounts can be linked with DIFFERENT passwords per
-        // apartment - see AuthController::login()) - this tries the typed
-        // one first, and only prompts for a different one if that fails.
-        await _chooseAccountWithRetry(chosen, _passCtrl.text, fcmToken);
+      // Multi-apartment identity and pending-invitation responses only
+      // ever occur for Resident/Apartment Admin logins (see
+      // AuthController::login()) - a company_admin login never produces
+      // either shape. Seeing one at all is therefore already proof this
+      // is the wrong account for this app, so reject immediately rather
+      // than rendering an apartment picker or invitation flow this app
+      // has nothing to do with.
+      if (res['multiple_accounts'] == true || res['invitations_pending_first'] == true) {
+        _rejectNonCompanyLogin();
         return;
       }
 
       // Post-login account verification (item 3) - this account has never
       // verified email or phone (see AuthController::verificationGate()).
-      // An OTP was already sent; ask for it before finishing the login.
+      // An OTP was already sent to it, but before asking for that code:
+      // 'role' rides along on this same response (added specifically for
+      // this app) - if it's present and isn't company_admin, this is a
+      // mistaken apartment_admin/resident login and gets the same
+      // immediate rejection, without ever opening the OTP dialog. If an
+      // older backend hasn't deployed the 'role' field yet, it's simply
+      // absent and this falls back to the previous behaviour (show the
+      // OTP dialog; the role is still checked as a safety net after
+      // verification in _completeLogin()) rather than blocking every login.
       if (res['needs_verification'] == true) {
+        final gateRole = res['role'] as String?;
+        if (gateRole != null && gateRole != 'company_admin') {
+          _rejectNonCompanyLogin();
+          return;
+        }
         final verified = await showAccountVerifyOtpDialog(context, res, fcmToken: fcmToken);
         if (verified == null) { setState(() => _loading = false); return; } // cancelled
         await _completeLogin(verified);
@@ -191,6 +199,20 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
+  /// Company app is restricted to the `company_admin` role - every other
+  /// signal that isn't actually company_admin (wrong role after login,
+  /// an apartment-picker response, a pending-apartment-invitation
+  /// response) collapses to this same message, shown immediately rather
+  /// than after any further step (like an OTP prompt) that only makes
+  /// sense for an account this app will end up rejecting anyway.
+  void _rejectNonCompanyLogin() {
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      _error = 'This app is for Company Admin accounts only.';
+    });
+  }
+
   /// Finishes login for [account]. Tries [password] (whatever was typed on
   /// the main form) first - the common case where every linked apartment
   /// shares one password, per AuthController::login()'s auto-link. If that
@@ -209,6 +231,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         }, auth: false);
 
         if (res2['needs_verification'] == true) {
+          final gateRole = res2['role'] as String?;
+          if (gateRole != null && gateRole != 'company_admin') {
+            _rejectNonCompanyLogin();
+            return;
+          }
           final verified = await showAccountVerifyOtpDialog(context, res2, fcmToken: fcmToken);
           if (verified == null) { if (mounted) setState(() => _loading = false); return; }
           await _completeLogin(verified);

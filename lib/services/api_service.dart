@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'auth_service.dart';
+import 'device_service.dart';
 import 'maintenance_service.dart';
 import '../main.dart' show router;
 
@@ -48,6 +49,32 @@ class ApiService {
       final token = await AuthService().getToken();
       if (token != null) h['Authorization'] = 'Bearer $token';
     }
+
+    // Account + Platform + Device + Login Method verification: identifies
+    // THIS app installation as its own trusted environment, separate from
+    // the website running in a browser on the same physical phone (see
+    // DeviceService, and DeviceVerificationService on the backend).
+    //
+    // Attached to EVERY request, not just /login, deliberately:
+    //   - /login, /login/choose-account and /verify-account-otp all need
+    //     it to pick the right verification record, and the last of those
+    //     is unauthenticated (auth: false), so this sits outside the
+    //     `if (auth)` block above.
+    //   - /linked-devices needs it to mark which entry is "This device".
+    //   - everything else simply ignores it.
+    //
+    // The backend treats a missing header as "no device context" and
+    // falls back to the older account-level check, so an older build in
+    // the wild keeps working rather than being locked out.
+    try {
+      h['X-Device-Id']   = await DeviceService.deviceId();
+      h['X-Device-Name'] = DeviceService.deviceName;
+      h['X-Device-Type'] = DeviceService.deviceType;
+    } catch (_) {
+      // Never let a device-id read failure break an API call - the server
+      // degrades gracefully without these.
+    }
+
     return h;
   }
 

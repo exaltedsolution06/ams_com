@@ -321,6 +321,26 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
+  /// Entry point to Profile > Linked Devices. Kept as a plain navigation
+  /// tile rather than an inline list: the list can hold both website and
+  /// company-app records with two status chips each, which is far more
+  /// than belongs inside a Settings tab that's already dense.
+  Widget _buildLinkedDevicesCard(Color primary) {
+    return Card(
+      child: ListTile(
+        leading: Icon(Icons.devices_other, color: primary),
+        title: const Text('Linked Devices',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        subtitle: const Text(
+          'Browsers and app installs where your account is trusted',
+          style: TextStyle(fontSize: 12),
+        ),
+        trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.black45),
+        onTap: () => context.push('/linked-devices'),
+      ),
+    );
+  }
+
   Widget _buildVoiceMicSwitch(Color primary) {
     // If the apartment itself has switched the mic off (Admin > Apartments
     // > Edit), this personal switch wouldn't do anything even if turned
@@ -760,6 +780,11 @@ class _ProfileScreenState extends State<ProfileScreen>
           _buildLinkAnotherApartmentHint(primary),
           const SizedBox(height: 16),
         ],
+        // Profile > Linked Devices (requirement sections 10/11) - where
+        // this account is currently trusted, per platform and per device,
+        // with a per-entry Remove. See LinkedDevicesScreen.
+        _buildLinkedDevicesCard(primary),
+        const SizedBox(height: 16),
         _buildVoiceMicSwitch(primary),
         const SizedBox(height: 16),
         _buildFontSizeCard(primary),

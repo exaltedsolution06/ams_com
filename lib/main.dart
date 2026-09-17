@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'services/auth_service.dart';
+import 'services/device_service.dart';
 import 'services/branding_service.dart';
 import 'services/language_service.dart';
 import 'services/app_refresh.dart';
@@ -28,6 +29,7 @@ import 'screens/auth/forgot_password_screen.dart';
 
 // ── Shared ────────────────────────────────────────────────────────────────────
 import 'screens/profile/profile_screen.dart';
+import 'screens/profile/linked_devices_screen.dart';
 import 'screens/notifications/notifications_screen.dart';
 import 'screens/notifications/notification_settings_screen.dart';
 import 'screens/emergency/emergency_numbers_screen.dart';
@@ -134,6 +136,13 @@ class _AppBootstrapState extends State<_AppBootstrap> {
   }
 
   Future<void> _init() async {
+    // Must run before the first API call: ApiService attaches this app
+    // install's device identifier to every request, and the very first
+    // one can be an unauthenticated /login whose verification gate depends
+    // on it. See DeviceService for why the id lives in SharedPreferences
+    // (it has to survive logout) and why it is a random UUID rather than
+    // anything derived from the physical handset.
+    await DeviceService.init();
     await LanguageService.loadSaved();
     await TextScaleService.loadSaved();
     await BrandingService.load();
@@ -278,6 +287,10 @@ final router = GoRouter(
     GoRoute(path: '/forgot-password-elevated', builder: (_, __) => const ForgotPasswordScreen(elevated: true)),
 
     GoRoute(path: '/profile',         builder: (_, __) => const ProfileScreen()),
+    // Profile > Linked Devices - the trusted environments (Account +
+    // Platform + Device) this account is verified on, and per-entry
+    // revoke. See LinkedDevicesScreen.
+    GoRoute(path: '/linked-devices',  builder: (_, __) => const LinkedDevicesScreen()),
     GoRoute(path: '/notifications',        builder: (_, __) => const NotificationsScreen()),
     GoRoute(path: '/notification-settings', builder: (_, __) => const NotificationSettingsScreen()),
     GoRoute(path: '/admin/emergency-numbers', builder: (_, __) => const EmergencyNumbersScreen()),
