@@ -19,6 +19,24 @@ class AdminResidentsScreen extends StatefulWidget {
 class _AdminResidentsScreenState extends State<AdminResidentsScreen> {
   List _residents = [];
   List _flats     = [];
+
+  // Comma-separated flat numbers for a resident: primary flat first,
+  // followed by any additional flats linked via resident_flats (see
+  // AdminApiController::residents(), which eager-loads both `flat` and
+  // `flats` so this doesn't need an extra request). Falls back to just
+  // the primary flat when the resident has no additional flats.
+  String _flatLine(Map r) {
+    final primaryNo = r['flat']?['flat_number']?.toString();
+    final flatsList = (r['flats'] as List?) ?? const [];
+    final additional = flatsList
+        .cast<Map>()
+        .where((f) => !toBool((f['pivot'] as Map?)?['is_primary'] ?? false))
+        .map((f) => f['flat_number']?.toString() ?? '')
+        .where((s) => s.isNotEmpty)
+        .toList();
+    final parts = [if (primaryNo != null && primaryNo.isNotEmpty) primaryNo, ...additional];
+    return parts.isEmpty ? '—' : parts.join(', ');
+  }
   // Standalone Apartment Admins (added by Super Admin, not yet also a
   // resident) that Add Resident can link to a flat instead of re-entering
   // their email/phone - see _showAddResident()'s "Link Existing Apartment
@@ -624,7 +642,7 @@ class _AdminResidentsScreenState extends State<AdminResidentsScreen> {
                       itemBuilder: (_, i) {
                         final r        = _residents[i] as Map;
                         final isActive = toBool(r['is_active']);
-                        final flatNo   = r['flat']?['flat_number'] ?? '—';
+                        final flatLine = _flatLine(r);
                         final avatarColor = r['occupancy_type'] == 'owner' ? Colors.blue : Colors.teal;
                         return Card(
                           child: ListTile(
@@ -646,7 +664,7 @@ class _AdminResidentsScreenState extends State<AdminResidentsScreen> {
                             title: Text(r['name'] as String? ?? '',
                                 style: const TextStyle(fontWeight: FontWeight.w600)),
                             subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text('${LanguageService.t('flat_label')} $flatNo  ·  ${r['phone'] ?? ''}',
+                              Text('${LanguageService.t('flat_label')} $flatLine  ·  ${r['phone'] ?? ''}',
                                   style: const TextStyle(fontSize: 12)),
                               const SizedBox(height: 3),
                               Container(

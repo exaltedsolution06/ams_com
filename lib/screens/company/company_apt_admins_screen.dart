@@ -8,6 +8,7 @@ import '../../widgets/ams_dialog.dart';
 import '../../widgets/app_form_field.dart';
 import '../../widgets/form_sheet.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/otp_box_input.dart';
 
 class CompanyAptAdminsScreen extends StatefulWidget {
   const CompanyAptAdminsScreen({super.key});
@@ -156,15 +157,13 @@ class _CompanyAptAdminsScreenState extends State<CompanyAptAdminsScreen> {
                   padding: const EdgeInsets.only(bottom: 10),
                   child: Text(otpMessage!, style: TextStyle(fontSize: 12.5, color: Colors.green.shade700)),
                 ),
-              AppFieldShell(
+              OtpBoxInput(
+                controller: otpCtrl,
                 accent: BrandingService.secondary,
-                child: TextField(
-                  controller: otpCtrl,
-                  keyboardType: TextInputType.number,
-                  maxLength: 6,
-                  decoration: appFieldDecoration(label: 'Enter OTP', icon: Icons.password_outlined, accent: BrandingService.secondary),
-                ),
+                boxWidth: 40,
+                boxHeight: 50,
               ),
+              const SizedBox(height: 6),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(

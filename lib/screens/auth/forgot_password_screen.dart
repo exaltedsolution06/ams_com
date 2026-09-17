@@ -6,6 +6,7 @@ import '../../services/curved_header.dart';
 import '../../services/language_service.dart';
 import '../../widgets/app_form_field.dart';
 import '../../widgets/login_hero_painter.dart';
+import '../../widgets/otp_box_input.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   // Super Admin / Company Admin accounts have no apartment_id, so they
@@ -349,20 +350,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with Single
 
                       // Step 2: OTP
                       if (_step == 2) ...[
-                        AppFieldShell(
+                        OtpBoxInput(
+                          controller: _otpCtrl,
                           accent: BrandingService.secondary,
-                          child: TextFormField(
-                            controller: _otpCtrl,
-                            keyboardType: TextInputType.number,
-                            textAlign: TextAlign.center,
-                            maxLength: 6,
-                            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: 14, color: BrandingService.secondary),
-                            decoration: appFieldDecoration(
-                              label: '',
-                              hint: '••••••',
-                              accent: BrandingService.secondary,
-                            ).copyWith(counterText: '', contentPadding: const EdgeInsets.symmetric(vertical: 16)),
-                          ),
+                          onCompleted: (_) { if (!_loading) _verifyOtp(); },
                         ),
                         const SizedBox(height: 4),
                         Align(

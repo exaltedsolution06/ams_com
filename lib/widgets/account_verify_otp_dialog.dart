@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../services/branding_service.dart';
+import 'otp_box_input.dart';
 
 /// Shown whenever a login/choose-account/switch-apartment API call comes
 /// back with `needs_verification: true` (see AuthController::
@@ -18,16 +20,24 @@ Future<Map<String, dynamic>?> showAccountVerifyOtpDialog(
   final userId = pending['user_id'];
   final otpCtrl = TextEditingController();
 
+  // These live in this OUTER builder (called once, when the dialog is
+  // first shown) rather than inside StatefulBuilder's own `builder`
+  // below - that inner one re-runs on every setState() call, so anything
+  // declared there gets reset to its initial value on every rebuild,
+  // silently discarding whatever verify()/resend() just set (loading,
+  // error, message) before it ever reaches the screen. That was why a
+  // wrong OTP appeared to do nothing: the error WAS set, then immediately
+  // wiped by the very rebuild that setState triggered.
+  bool loading = false;
+  bool resending = false;
+  String? error;
+  String message = pending['message']?.toString() ?? 'An OTP has been sent to verify your account.';
+
   return showDialog<Map<String, dynamic>>(
     context: context,
     barrierDismissible: false,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setState) {
-        bool loading = false;
-        bool resending = false;
-        String? error;
-        String message = pending['message']?.toString() ?? 'An OTP has been sent to verify your account.';
-
         Future<void> verify() async {
           if (otpCtrl.text.trim().length != 6) {
             setState(() => error = 'Enter the 6-digit OTP.');
@@ -63,17 +73,19 @@ Future<Map<String, dynamic>?> showAccountVerifyOtpDialog(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(message, style: const TextStyle(fontSize: 13, color: Colors.black54)),
-              const SizedBox(height: 14),
-              TextField(
+              const SizedBox(height: 16),
+              OtpBoxInput(
                 controller: otpCtrl,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                decoration: InputDecoration(
-                  labelText: 'Enter OTP',
-                  border: const OutlineInputBorder(),
-                  errorText: error,
-                ),
+                accent: BrandingService.primary,
+                boxWidth: 38,
+                boxHeight: 48,
+                hasError: error != null,
+                onCompleted: (_) { if (!loading) verify(); },
               ),
+              if (error != null) ...[
+                const SizedBox(height: 6),
+                Text(error!, style: TextStyle(fontSize: 12, color: Colors.red.shade600)),
+              ],
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
