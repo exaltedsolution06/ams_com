@@ -8,7 +8,6 @@ import '../../widgets/ams_dialog.dart';
 import '../../widgets/app_form_field.dart';
 import '../../widgets/form_sheet.dart';
 import '../../widgets/empty_state.dart';
-import '../../widgets/otp_box_input.dart';
 
 class CompanyAptAdminsScreen extends StatefulWidget {
   const CompanyAptAdminsScreen({super.key});
@@ -57,12 +56,6 @@ class _CompanyAptAdminsScreenState extends State<CompanyAptAdminsScreen> {
     };
     bool saving = false;
     String? formError;
-    // Verify-before-create flow (item 2) - Company Admin only ever
-    // verifies a new admin by Email (no Phone option).
-    bool otpSent = false;
-    String? otpToken;
-    String? otpMessage;
-    final otpCtrl = TextEditingController();
 
     showModalBottomSheet(
       context: context,
@@ -151,40 +144,11 @@ class _CompanyAptAdminsScreenState extends State<CompanyAptAdminsScreen> {
               )).toList(),
             ),
             const SizedBox(height: 20),
-            if (!isEdit && otpSent) ...[
-              if (otpMessage != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Text(otpMessage!, style: TextStyle(fontSize: 12.5, color: Colors.green.shade700)),
-                ),
-              OtpBoxInput(
-                controller: otpCtrl,
-                accent: BrandingService.secondary,
-                boxWidth: 40,
-                boxHeight: 50,
-              ),
-              const SizedBox(height: 6),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: saving ? null : () async {
-                    try {
-                      final res = await ApiService().post('/company/apt-admins/resend-otp', {'token': otpToken});
-                      setS(() => otpMessage = res['message']?.toString());
-                    } catch (e) {
-                      setS(() => formError = e.toString().replaceAll('Exception: ', ''));
-                    }
-                  },
-                  child: const Text('Resend OTP'),
-                ),
-              ),
-              const SizedBox(height: 6),
-            ],
             ElevatedButton.icon(
               icon: saving
                   ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Icon(isEdit ? Icons.save_outlined : (otpSent ? Icons.check_circle_outline : Icons.send_outlined)),
-              label: Text(saving ? '' : (isEdit ? LanguageService.t('save') : (otpSent ? 'Create Admin' : 'Send OTP'))),
+                  : Icon(isEdit ? Icons.save_outlined : Icons.person_add_alt_1_outlined),
+              label: Text(saving ? '' : (isEdit ? LanguageService.t('save') : LanguageService.t('create_admin'))),
               style: ElevatedButton.styleFrom(
                   backgroundColor: BrandingService.primary,
                   foregroundColor: Colors.white,
@@ -205,8 +169,8 @@ class _CompanyAptAdminsScreenState extends State<CompanyAptAdminsScreen> {
                   }
                   setS(() { saving = true; formError = null; });
 
-                  if (isEdit) {
-                    try {
+                  try {
+                    if (isEdit) {
                       final payload = {
                         'name': nameCtrl.text.trim(),
                         'email': emailCtrl.text.trim(),
@@ -218,21 +182,13 @@ class _CompanyAptAdminsScreenState extends State<CompanyAptAdminsScreen> {
                         },
                       };
                       await ApiService().put('/company/apt-admins/${admin['id']}', payload);
-                      if (ctx.mounted) Navigator.pop(ctx);
-                      _load();
-                    } catch (e) {
-                      setS(() { saving = false; formError = e.toString().replaceAll('Exception: ', ''); });
-                    }
-                    return;
-                  }
-
-                  // Create flow: step 1 sends the OTP, step 2 (button now
-                  // reads "Create Admin") verifies it and actually creates
-                  // the account - see CompanyApiController::
-                  // sendAptAdminOtp()/verifyAptAdminOtp().
-                  try {
-                    if (!otpSent) {
-                      final res = await ApiService().post('/company/apt-admins/send-otp', {
+                    } else {
+                      // Item 9: one direct submit, no Verify Method/OTP
+                      // step - matches the website's unified form and
+                      // CompanyApiController::storeAptAdmin(). The new
+                      // admin still verifies their own email/phone with
+                      // an OTP the first time THEY log in.
+                      await ApiService().post('/company/apt-admins', {
                         'name': nameCtrl.text.trim(),
                         'email': emailCtrl.text.trim(),
                         'phone': phoneCtrl.text.trim(),
@@ -240,24 +196,9 @@ class _CompanyAptAdminsScreenState extends State<CompanyAptAdminsScreen> {
                         'password_confirmation': confirmCtrl.text,
                         'apartment_ids': selectedApts.toList(),
                       });
-                      setS(() {
-                        saving = false;
-                        otpSent = true;
-                        otpToken = res['token']?.toString();
-                        otpMessage = res['message']?.toString();
-                      });
-                    } else {
-                      if (otpCtrl.text.trim().length != 6) {
-                        setS(() { saving = false; formError = 'Enter the 6-digit OTP.'; });
-                        return;
-                      }
-                      await ApiService().post('/company/apt-admins/verify-otp', {
-                        'token': otpToken,
-                        'otp': otpCtrl.text.trim(),
-                      });
-                      if (ctx.mounted) Navigator.pop(ctx);
-                      _load();
                     }
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    _load();
                   } catch (e) {
                     setS(() { saving = false; formError = e.toString().replaceAll('Exception: ', ''); });
                   }

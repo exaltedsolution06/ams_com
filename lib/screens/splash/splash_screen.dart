@@ -67,10 +67,29 @@ class SplashScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 28),
-                  const Text(
-                    'Apartment Management System',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: 0.2),
+                  // Responsive/dynamic title: font size is derived from the
+                  // available width (not a single fixed size for every
+                  // device) and FittedBox is a safety net that scales the
+                  // text down further if it would still overflow, so
+                  // "Apartment Management System" always renders on one
+                  // line with a consistent left/right margin on any phone.
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final fontSize = (constraints.maxWidth / 11.2).clamp(18.0, 34.0);
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.center,
+                          child: Text(
+                            'Apartment Management System',
+                            maxLines: 1,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white, fontSize: fontSize, fontWeight: FontWeight.w800, letterSpacing: 0.2),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 6),
                   Text(

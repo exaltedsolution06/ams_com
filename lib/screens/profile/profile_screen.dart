@@ -423,8 +423,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     setState(() => _profileSaving = true);
     try {
       await ApiService().put('/profile', {
-        'name':  _nameCtrl.text.trim(),
-        'phone': _phoneCtrl.text.trim(),
+        'name': _nameCtrl.text.trim(),
       });
       final me = await ApiService().get('/me');
       await AuthService().saveUser(Map<String, dynamic>.from(me['data'] as Map));
@@ -660,8 +659,20 @@ class _ProfileScreenState extends State<ProfileScreen>
                         child: Column(children: [
                           _field(_nameCtrl,  LanguageService.t('full_name'),  Icons.person_outline),
                           const SizedBox(height: 14),
-                          _field(_phoneCtrl, LanguageService.t('phone'),      Icons.phone_outlined,
-                              keyboardType: TextInputType.phone),
+                          // Read-only: phone number can no longer be edited
+                          // from the Profile page (contact admin to change),
+                          // matching the email field's existing style below.
+                          TextField(
+                            enabled: false,
+                            controller: _phoneCtrl,
+                            keyboardType: TextInputType.phone,
+                            decoration: InputDecoration(
+                              labelText: '${LanguageService.t('phone')} (contact admin to change)',
+                              prefixIcon: const Icon(Icons.phone_outlined),
+                              fillColor: Colors.grey[100],
+                              filled: true,
+                            ),
+                          ),
                           const SizedBox(height: 14),
                           TextField(
                             enabled: false,

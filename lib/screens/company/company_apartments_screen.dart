@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../services/api_service.dart';
 import '../../services/branding_service.dart';
 import '../../services/language_service.dart';
@@ -8,6 +10,7 @@ import '../../widgets/ams_dialog.dart';
 import '../../widgets/app_form_field.dart';
 import '../../widgets/form_sheet.dart';
 import '../../widgets/empty_state.dart';
+import '../../utils/type_helpers.dart';
 
 Map<String, String> get _kAptTypes => {
   'with_tower': LanguageService.t('with_towers'),
@@ -25,8 +28,36 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
   bool _loading = true;
   String? _error;
 
+  // Item 8: same "Country" list (GET /countries/all) and "Plan" list (this
+  // company's own plans, GET /company/plans) the website's Company Admin ->
+  // Add Apartment form offers - loaded once up front so the Add/Edit sheet
+  // can open instantly.
+  List<Map<String, dynamic>> _countries = [];
+  List<Map<String, dynamic>> _plans = [];
+
   @override
-  void initState() { super.initState(); _load(); }
+  void initState() {
+    super.initState();
+    _load();
+    _loadCountries();
+    _loadPlans();
+  }
+
+  Future<void> _loadCountries() async {
+    try {
+      final res = await ApiService().get('/countries/all');
+      final list = (res['data'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      if (mounted) setState(() => _countries = list);
+    } catch (_) {/* Country dropdown just stays empty; form still works. */}
+  }
+
+  Future<void> _loadPlans() async {
+    try {
+      final res = await ApiService().get('/company/plans');
+      final list = (res['data'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      if (mounted) setState(() => _plans = list);
+    } catch (_) {/* Plan section just stays empty/optional; form still works. */}
+  }
 
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
@@ -45,7 +76,19 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
     final cityCtrl = TextEditingController(text: apartment?['city'] as String? ?? '');
     final stateCtrl = TextEditingController(text: apartment?['state'] as String? ?? '');
     final pincodeCtrl = TextEditingController(text: apartment?['pincode'] as String? ?? '');
+    final contactNameCtrl = TextEditingController(text: apartment?['contact_name'] as String? ?? '');
+    final contactPhoneCtrl = TextEditingController(text: apartment?['contact_phone'] as String? ?? '');
+    final contactEmailCtrl = TextEditingController(text: apartment?['contact_email'] as String? ?? '');
+    final amountPaidCtrl = TextEditingController(text: '0');
+    final paymentRefCtrl = TextEditingController();
     String type = apartment?['apartment_type'] as String? ?? 'without_tower';
+    String? country = apartment?['country'] as String?;
+    if (country == null || country.isEmpty) {
+      final india = _countries.firstWhere((c) => c['iso2'] == 'IN', orElse: () => <String, dynamic>{});
+      country = (india['name'] as String?) ?? (_countries.isNotEmpty ? _countries.first['name'] as String? : null);
+    }
+    int? planId;
+    XFile? pickedLogo;
     bool saving = false;
     String? formError;
 
@@ -100,6 +143,19 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
               ),
             ),
             const SizedBox(height: 14),
+            AppFieldShell(
+              accent: BrandingService.secondary,
+              child: DropdownButtonFormField<String>(
+                value: _countries.any((c) => c['name'] == country) ? country : null,
+                isExpanded: true,
+                items: _countries
+                    .map((c) => DropdownMenuItem(value: c['name'] as String, child: Text(c['name'] as String, overflow: TextOverflow.ellipsis)))
+                    .toList(),
+                onChanged: (v) => setS(() => country = v),
+                decoration: appFieldDecoration(label: LanguageService.t('country'), icon: Icons.public_outlined, accent: BrandingService.secondary),
+              ),
+            ),
+            const SizedBox(height: 14),
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(
                 child: AppFieldShell(
@@ -125,6 +181,89 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
               ),
             ),
             const SizedBox(height: 20),
+            Text(LanguageService.t('contact_person'), style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[600])),
+            const SizedBox(height: 10),
+            AppFieldShell(
+              accent: BrandingService.primary,
+              child: TextField(controller: contactNameCtrl, decoration: appFieldDecoration(label: LanguageService.t('contact_name'), icon: Icons.person_outline, accent: BrandingService.primary)),
+            ),
+            const SizedBox(height: 14),
+            AppFieldShell(
+              accent: BrandingService.secondary,
+              child: TextField(controller: contactPhoneCtrl, keyboardType: TextInputType.phone, decoration: appFieldDecoration(label: LanguageService.t('contact_phone'), icon: Icons.phone_outlined, accent: BrandingService.secondary)),
+            ),
+            const SizedBox(height: 14),
+            AppFieldShell(
+              accent: BrandingService.primary,
+              child: TextField(controller: contactEmailCtrl, keyboardType: TextInputType.emailAddress, decoration: appFieldDecoration(label: LanguageService.t('contact_email'), icon: Icons.email_outlined, accent: BrandingService.primary)),
+            ),
+            const SizedBox(height: 14),
+            // Logo - optional, same as the website's Add Apartment form.
+            InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () async {
+                final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 85);
+                if (picked != null) setS(() => pickedLogo = picked);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(12)),
+                child: Row(children: [
+                  if (pickedLogo != null)
+                    ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.file(File(pickedLogo!.path), width: 40, height: 40, fit: BoxFit.cover))
+                  else
+                    Icon(Icons.image_outlined, color: Colors.grey[500]),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(pickedLogo != null ? pickedLogo!.name : LanguageService.t('logo'), overflow: TextOverflow.ellipsis)),
+                  Icon(Icons.upload_outlined, size: 18, color: Colors.grey[500]),
+                ]),
+              ),
+            ),
+            if (!isEdit && _plans.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Text('${LanguageService.t('subscription_plan')} (${LanguageService.t('optional')})', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[600])),
+              const SizedBox(height: 10),
+              AppFieldShell(
+                accent: BrandingService.secondary,
+                child: DropdownButtonFormField<int>(
+                  value: planId,
+                  isExpanded: true,
+                  items: [
+                    DropdownMenuItem<int>(value: null, child: Text(LanguageService.t('no_plan_yet_free'))),
+                    for (final p in _plans)
+                      DropdownMenuItem<int>(
+                        value: p['id'] as int,
+                        child: Text(
+                          '${p['name']} — ${toNum(p['price']) > 0 ? BrandingService.currencySymbol + toNum(p['price']).toString() : LanguageService.t('free')}',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                  onChanged: (v) => setS(() => planId = v),
+                  decoration: appFieldDecoration(label: LanguageService.t('plan'), icon: Icons.card_membership_outlined, accent: BrandingService.secondary),
+                ),
+              ),
+              if (planId != null) ...[
+                const SizedBox(height: 14),
+                AppFieldShell(
+                  accent: BrandingService.primary,
+                  child: TextField(
+                    controller: amountPaidCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: appFieldDecoration(label: '${LanguageService.t('amount_paid')} (${BrandingService.currencySymbol})', icon: Icons.payments_outlined, accent: BrandingService.primary),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                AppFieldShell(
+                  accent: BrandingService.secondary,
+                  child: TextField(
+                    controller: paymentRefCtrl,
+                    decoration: appFieldDecoration(label: LanguageService.t('payment_reference'), icon: Icons.receipt_long_outlined, accent: BrandingService.secondary),
+                  ),
+                ),
+              ],
+            ],
+            const SizedBox(height: 20),
             ElevatedButton.icon(
               icon: saving
                   ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
@@ -137,24 +276,39 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
               onPressed: saving ? null : () async {
                   if (nameCtrl.text.trim().isEmpty || addressCtrl.text.trim().isEmpty ||
+                      (country == null || country!.isEmpty) ||
                       cityCtrl.text.trim().isEmpty || stateCtrl.text.trim().isEmpty || pincodeCtrl.text.trim().isEmpty) {
                     setS(() => formError = LanguageService.t('please_fill_all_required_fields'));
                     return;
                   }
                   setS(() { saving = true; formError = null; });
-                  final payload = {
+                  final fields = <String, String>{
                     'name': nameCtrl.text.trim(),
                     'apartment_type': type,
                     'address': addressCtrl.text.trim(),
+                    'country': country ?? '',
                     'city': cityCtrl.text.trim(),
                     'state': stateCtrl.text.trim(),
                     'pincode': pincodeCtrl.text.trim(),
+                    'contact_name': contactNameCtrl.text.trim(),
+                    'contact_phone': contactPhoneCtrl.text.trim(),
+                    'contact_email': contactEmailCtrl.text.trim(),
+                    if (isEdit) 'is_active': (apartment['is_active'] ?? true).toString(),
+                    if (!isEdit && planId != null) 'plan_id': planId.toString(),
+                    if (!isEdit && planId != null) 'amount_paid': amountPaidCtrl.text.trim().isEmpty ? '0' : amountPaidCtrl.text.trim(),
+                    if (!isEdit && planId != null) 'payment_reference': paymentRefCtrl.text.trim(),
                   };
                   try {
                     if (isEdit) {
-                      await ApiService().put('/company/apartments/${apartment['id']}', {...payload, 'is_active': apartment['is_active'] ?? true});
+                      await ApiService().uploadMultipart(
+                        '/company/apartments/${apartment['id']}', fields,
+                        filePath: pickedLogo?.path, fileField: 'logo', httpMethod: 'PUT',
+                      );
                     } else {
-                      await ApiService().post('/company/apartments', payload);
+                      await ApiService().uploadMultipart(
+                        '/company/apartments', fields,
+                        filePath: pickedLogo?.path, fileField: 'logo',
+                      );
                     }
                     if (ctx.mounted) Navigator.pop(ctx);
                     _load();
@@ -175,6 +329,7 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
         'name': apt['name'],
         'apartment_type': apt['apartment_type'],
         'address': apt['address'],
+        'country': apt['country'],
         'city': apt['city'],
         'state': apt['state'],
         'pincode': apt['pincode'],

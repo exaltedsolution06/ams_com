@@ -24,6 +24,7 @@ class AdminSubscriptionScreen extends StatefulWidget {
 class _AdminSubscriptionScreenState extends State<AdminSubscriptionScreen> {
   Map<String, dynamic>? _status;
   List _plans = [];
+  List _transactions = [];
   bool _hasOnlineGateway = false;
   Map<String, dynamic>? _bankDetails;
   bool _loading = true;
@@ -76,11 +77,13 @@ class _AdminSubscriptionScreenState extends State<AdminSubscriptionScreen> {
       final s = await ApiService().get('/admin/subscription/status');
       final p = await ApiService().get('/admin/subscription/plans');
       final b = await ApiService().get('/admin/subscription/bank-details');
+      final t = await ApiService().get('/admin/subscription/transactions');
       setState(() {
         _status = (s['data'] as Map?)?.cast<String, dynamic>();
         _plans = (p['data']?['plans'] as List?) ?? [];
         _hasOnlineGateway = p['data']?['has_online_gateway'] == true;
         _bankDetails = (b['data'] as Map?)?.cast<String, dynamic>();
+        _transactions = (t['data']?['data'] as List?) ?? [];
         _loading = false;
       });
     } catch (_) {
@@ -607,17 +610,27 @@ class _AdminSubscriptionScreenState extends State<AdminSubscriptionScreen> {
                   const SizedBox(height: 10),
                   ..._plans.map((p) {
                     final isCurrent = sub?['current_plan']?['id'] == p['id'];
+                    final upg = (p['upgrade_preview'] as Map?) ?? const {};
+                    final isUpgrade = upg['is_upgrade'] == true;
+                    final unusedCredit = toNum(upg['unused_credit']);
                     return Card(
                       child: ListTile(
                         title: Text(p['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text('${BrandingService.currencySymbol}${p['price']} / ${(p['duration_days'] ?? 0) > 0 ? '${p['duration_days']} days' : 'Unlimited'}'),
+                        subtitle: Text(
+                          '${BrandingService.currencySymbol}${p['price']} / ${(p['duration_days'] ?? 0) > 0 ? '${p['duration_days']} days' : 'Unlimited'}'
+                          '${isUpgrade && unusedCredit > 0 ? '\n${BrandingService.currencySymbol}${unusedCredit.toStringAsFixed(0)} credited from your current plan' : ''}',
+                          style: isUpgrade && unusedCredit > 0 ? TextStyle(color: Colors.green.shade700, fontSize: 12.5) : null,
+                        ),
+                        isThreeLine: isUpgrade && unusedCredit > 0,
                         trailing: isCurrent
                             ? Chip(label: Text(LanguageService.t('current')))
                             : ElevatedButton(
                                 onPressed: () => _choosePlan(p),
-                                child: Text(toNum(p['price']) > 0
-                                    ? (_hasOnlineGateway ? 'Pay Online' : 'Pay Cash')
-                                    : 'Activate'),
+                                child: Text(isUpgrade
+                                    ? 'Upgrade for ${BrandingService.currencySymbol}${toNum(upg['amount_due']).toStringAsFixed(0)}'
+                                    : (toNum(p['price']) > 0
+                                        ? (_hasOnlineGateway ? 'Pay Online' : 'Pay Cash')
+                                        : 'Activate')),
                               ),
                       ),
                     );
@@ -630,6 +643,42 @@ class _AdminSubscriptionScreenState extends State<AdminSubscriptionScreen> {
                         style: TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                     ),
+                  const SizedBox(height: 24),
+                  // Item 2: view-only (no edit/delete) transaction history.
+                  Text(LanguageService.t('transaction_history'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  const SizedBox(height: 10),
+                  if (_transactions.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Text('No transactions yet.', style: TextStyle(fontSize: 13, color: Colors.grey[600])),
+                    )
+                  else
+                    ..._transactions.map((t) {
+                      final planName = t['subscription']?['plan']?['name'] ?? '—';
+                      final status = (t['status'] ?? '') as String;
+                      final statusColor = status == 'success'
+                          ? Colors.green
+                          : (status == 'pending' ? Colors.orange : Colors.red);
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        child: ListTile(
+                          dense: true,
+                          title: Text(planName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5)),
+                          subtitle: Text(
+                            '${(t['type'] ?? '').toString().replaceAll('_', ' ')} · ${(t['gateway'] ?? '').toString().replaceAll('_', ' ')} · ${(t['created_at'] ?? '').toString().split('T').first}',
+                            style: const TextStyle(fontSize: 11.5),
+                          ),
+                          trailing: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text('${BrandingService.currencySymbol}${t['amount']}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                              Text(status, style: TextStyle(fontSize: 11, color: statusColor, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
                 ],
               ),
             ),
