@@ -4,8 +4,11 @@ import '../../services/api_service.dart';
 import '../../services/branding_service.dart';
 import '../../services/language_service.dart';
 import '../../services/drawer_state.dart';
+import '../../services/curved_header.dart';
 import '../../widgets/app_drawer.dart';
+import '../../widgets/app_bottom_nav.dart';
 import '../../widgets/announcement_banner.dart';
+import '../../widgets/dashboard_graphics.dart';
 import '../../widgets/empty_state.dart';
 
 class CompanyDashboardScreen extends StatefulWidget {
@@ -15,6 +18,7 @@ class CompanyDashboardScreen extends StatefulWidget {
 }
 
 class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   Map<String, dynamic>? _data;
   Map<String, dynamic>? _platformBankDetails;
   bool _loading = true;
@@ -63,14 +67,23 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
     final apartments = (_data?['apartments'] as List?) ?? [];
 
     return Scaffold(
+      key: _scaffoldKey,
+      // Item 7: same top (CurvedHeader hero) and bottom (AppBottomNav pill)
+      // design as ams_app's admin_dashboard_screen.dart, instead of this
+      // screen's old plain AppBar with no bottom nav at all.
+      bottomNavigationBar: AppBottomNav(
+        currentRoute: '/company/dashboard',
+        items: [
+          NavItem(icon: Icons.home_rounded,               label: LanguageService.t('home'),             route: '/company/dashboard', isHome: true),
+          NavItem(icon: Icons.apartment_rounded,           label: LanguageService.t('my_apartments'),    route: '/company/apartments'),
+          NavItem(icon: Icons.person_add_alt_1_rounded,    label: LanguageService.t('apartment_admins'), route: '/company/apt-admins'),
+          NavItem(icon: Icons.person_rounded,               label: LanguageService.t('profile'),          route: '/profile'),
+        ],
+        centerItem: NavItem(icon: Icons.receipt_long_rounded, label: LanguageService.t('subscriptions'), route: '/company/subscriptions'),
+      ),
       backgroundColor: const Color(0xFFF0F2F5),
       drawer: const AppDrawer(),
       onDrawerChanged: DrawerVisibility.onChanged,
-      appBar: AppBar(
-        backgroundColor: primary,
-        foregroundColor: Colors.white,
-        title: Text(company['name'] as String? ?? LanguageService.t('company_dashboard')),
-      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -79,8 +92,55 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                   onRefresh: _load,
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      CurvedHeader(
+                        height: 148,
+                        colors: [BrandingService.appBanner, BrandingService.sidebar],
+                        bottomRadius: 24,
+                        child: Stack(children: [
+                          const Positioned.fill(child: HeaderGeometricPattern()),
+                          SafeArea(
+                            bottom: false,
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
+                              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 22),
+                                    constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                                    padding: EdgeInsets.zero,
+                                    onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                                  ),
+                                  const Spacer(),
+                                  IconButton(
+                                    icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 21),
+                                    constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                                    padding: EdgeInsets.zero,
+                                    onPressed: () => context.push('/notifications'),
+                                  ),
+                                ]),
+                                const SizedBox(height: 4),
+                                Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                                  Expanded(
+                                    child: Text(
+                                        company['name'] as String? ?? LanguageService.t('company_dashboard'),
+                                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+                                  ),
+                                  Icon(Icons.corporate_fare_rounded, color: Colors.white.withOpacity(0.8), size: 17),
+                                ]),
+                                const SizedBox(height: 2),
+                                Text(LanguageService.t('company_dashboard'), style: const TextStyle(color: Colors.white70, fontSize: 12.5)),
+                              ]),
+                            ),
+                          ),
+                        ]),
+                      ),
+                      Transform.translate(
+                        offset: const Offset(0, -2),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                       const AnnouncementBanner(),
                       if (company['active_subscription'] == null)
                         Container(
@@ -186,6 +246,9 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
                                 subtitle: Text('${apt['flats_count'] ?? 0} ${LanguageService.t('flats')} · ${apt['users_count'] ?? 0} ${LanguageService.t('residents')}'),
                               ),
                             )),
+                      ]),
+                        ),
+                      ),
                     ]),
                   ),
                 ),

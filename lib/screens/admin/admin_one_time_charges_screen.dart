@@ -88,6 +88,13 @@ class _OTCState extends State<AdminOneTimeChargesScreen> {
                                   const SizedBox(width: 8),
                                   Text(status == 'partial' ? '${BrandingService.currencySymbol}${item['outstanding']} / ${BrandingService.currencySymbol}${item['amount']}' : '${BrandingService.currencySymbol}${item['amount']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                                 ]),
+                                // Item 12: shown separately, not folded into the amount above.
+                                if (item['late_fee_enabled'] == true && (double.tryParse(item['late_fee']?.toString() ?? '0') ?? 0) > 0)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 3),
+                                    child: Text('${LanguageService.t('accumulated_late_fee')}: ${BrandingService.currencySymbol}${item['late_fee']}',
+                                        style: const TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.w600)),
+                                  ),
                                 const SizedBox(height: 8),
                                 Row(children: [
                                   Container(
@@ -205,6 +212,11 @@ class _OTCState extends State<AdminOneTimeChargesScreen> {
     String? flatsError;
     final Map<dynamic, TextEditingController> flatAmountCtrls = {};
     String? formError;
+    // Items 11/12: Late Fee Logic.
+    bool otcLateFeeEnabled = false;
+    final otcGraceDaysCtrl = TextEditingController(text: '0');
+    String otcLateFeeType = 'fixed';
+    final otcLateFeeAmountCtrl = TextEditingController(text: '0');
 
     Future<void> loadFlats(void Function(void Function()) setS) async {
       setS(() { flatsLoading = true; flatsError = null; });
@@ -308,6 +320,32 @@ class _OTCState extends State<AdminOneTimeChargesScreen> {
           ],
           const SizedBox(height: 14),
           AppFieldShell(accent: Colors.deepOrange, child: TextField(controller: descCtrl, maxLines: 2, decoration: appFieldDecoration(label: LanguageService.t('description_optional'), icon: Icons.notes_outlined, accent: Colors.deepOrange).copyWith(alignLabelWithHint: true))),
+          const SizedBox(height: 16),
+          // Items 11/12: Late Fee Logic, same as Charge Setup.
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.grey[300]!)),
+            child: Row(children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.grey),
+              const SizedBox(width: 12),
+              Expanded(child: Text(LanguageService.t('late_fee'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500))),
+              Switch(value: otcLateFeeEnabled, onChanged: (v) => setS(() => otcLateFeeEnabled = v), activeColor: BrandingService.primary),
+            ]),
+          ),
+          if (otcLateFeeEnabled) ...[
+            const SizedBox(height: 12),
+            AppFieldShell(accent: Colors.deepOrange, child: TextField(controller: otcGraceDaysCtrl, keyboardType: TextInputType.number, decoration: appFieldDecoration(label: LanguageService.t('grace_period_days'), icon: Icons.hourglass_bottom, accent: Colors.deepOrange))),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(child: ChoiceChip(label: Text(LanguageService.t('fixed_amount')), selected: otcLateFeeType == 'fixed', onSelected: (_) => setS(() => otcLateFeeType = 'fixed'))),
+              const SizedBox(width: 10),
+              Expanded(child: ChoiceChip(label: Text(LanguageService.t('percentage')), selected: otcLateFeeType == 'percentage', onSelected: (_) => setS(() => otcLateFeeType = 'percentage'))),
+            ]),
+            const SizedBox(height: 12),
+            AppFieldShell(accent: Colors.deepOrange, child: TextField(controller: otcLateFeeAmountCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: appFieldDecoration(label: LanguageService.t('late_fee_amount_per_month'), icon: Icons.currency_rupee, accent: Colors.deepOrange))),
+            const SizedBox(height: 8),
+            Text(LanguageService.t('late_fee_hint'), style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          ],
           const SizedBox(height: 22),
           Container(
             decoration: BoxDecoration(
@@ -321,7 +359,8 @@ class _OTCState extends State<AdminOneTimeChargesScreen> {
               setS(() => formError = null);
               if (titleCtrl.text.trim().isEmpty || double.tryParse(amtCtrl.text.trim()) == null) { setS(() => formError = LanguageService.t('title_and_valid_amount_required')); return; }
               try {
-                final Map<String, dynamic> body = {'title': titleCtrl.text.trim(), 'default_amount': double.parse(amtCtrl.text.trim()), 'due_date': dateCtrl.text, 'apply_type': applyType, 'description': descCtrl.text.trim()};
+                final Map<String, dynamic> body = {'title': titleCtrl.text.trim(), 'default_amount': double.parse(amtCtrl.text.trim()), 'due_date': dateCtrl.text, 'apply_type': applyType, 'description': descCtrl.text.trim(),
+                  'late_fee_enabled': otcLateFeeEnabled, 'late_fee_grace_days': int.tryParse(otcGraceDaysCtrl.text.trim()) ?? 0, 'late_fee_type': otcLateFeeType, 'late_fee_amount': double.tryParse(otcLateFeeAmountCtrl.text.trim()) ?? 0};
                 if (applyType == 'individual') {
                   final flatAmounts = <String, double>{};
                   for (final entry in flatAmountCtrls.entries) {
@@ -353,6 +392,11 @@ class _OTCState extends State<AdminOneTimeChargesScreen> {
     String? itemsError;
     final Map<dynamic, TextEditingController> flatAmountCtrls = {};
     String? formError;
+    // Items 11/12: Late Fee Logic.
+    bool otcLateFeeEnabled = c['late_fee_enabled'] == true;
+    final otcGraceDaysCtrl = TextEditingController(text: '${c['late_fee_grace_days'] ?? 0}');
+    String otcLateFeeType = c['late_fee_type'] as String? ?? 'fixed';
+    final otcLateFeeAmountCtrl = TextEditingController(text: '${c['late_fee_amount'] ?? 0}');
 
     Future<void> loadItems(void Function(void Function()) setS) async {
       setS(() { itemsLoading = true; itemsError = null; });
@@ -466,6 +510,31 @@ class _OTCState extends State<AdminOneTimeChargesScreen> {
           ],
           const SizedBox(height: 14),
           AppFieldShell(accent: Colors.deepOrange, child: TextField(controller: descCtrl, maxLines: 2, decoration: appFieldDecoration(label: LanguageService.t('description_optional'), icon: Icons.notes_outlined, accent: Colors.deepOrange).copyWith(alignLabelWithHint: true))),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.grey[300]!)),
+            child: Row(children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.grey),
+              const SizedBox(width: 12),
+              Expanded(child: Text(LanguageService.t('late_fee'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500))),
+              Switch(value: otcLateFeeEnabled, onChanged: (v) => setS(() => otcLateFeeEnabled = v), activeColor: BrandingService.primary),
+            ]),
+          ),
+          if (otcLateFeeEnabled) ...[
+            const SizedBox(height: 12),
+            AppFieldShell(accent: Colors.deepOrange, child: TextField(controller: otcGraceDaysCtrl, keyboardType: TextInputType.number, decoration: appFieldDecoration(label: LanguageService.t('grace_period_days'), icon: Icons.hourglass_bottom, accent: Colors.deepOrange))),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(child: ChoiceChip(label: Text(LanguageService.t('fixed_amount')), selected: otcLateFeeType == 'fixed', onSelected: (_) => setS(() => otcLateFeeType = 'fixed'))),
+              const SizedBox(width: 10),
+              Expanded(child: ChoiceChip(label: Text(LanguageService.t('percentage')), selected: otcLateFeeType == 'percentage', onSelected: (_) => setS(() => otcLateFeeType = 'percentage'))),
+            ]),
+            const SizedBox(height: 12),
+            AppFieldShell(accent: Colors.deepOrange, child: TextField(controller: otcLateFeeAmountCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: appFieldDecoration(label: LanguageService.t('late_fee_amount_per_month'), icon: Icons.currency_rupee, accent: Colors.deepOrange))),
+            const SizedBox(height: 8),
+            Text(LanguageService.t('late_fee_hint'), style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          ],
           const SizedBox(height: 22),
           Container(
             decoration: BoxDecoration(
@@ -479,7 +548,8 @@ class _OTCState extends State<AdminOneTimeChargesScreen> {
               setS(() => formError = null);
               if (titleCtrl.text.trim().isEmpty || double.tryParse(amtCtrl.text.trim()) == null) { setS(() => formError = LanguageService.t('title_and_valid_amount_required')); return; }
               try {
-                final Map<String, dynamic> body = {'title': titleCtrl.text.trim(), 'default_amount': double.parse(amtCtrl.text.trim()), 'due_date': dateCtrl.text, 'apply_type': applyType, 'description': descCtrl.text.trim()};
+                final Map<String, dynamic> body = {'title': titleCtrl.text.trim(), 'default_amount': double.parse(amtCtrl.text.trim()), 'due_date': dateCtrl.text, 'apply_type': applyType, 'description': descCtrl.text.trim(),
+                  'late_fee_enabled': otcLateFeeEnabled, 'late_fee_grace_days': int.tryParse(otcGraceDaysCtrl.text.trim()) ?? 0, 'late_fee_type': otcLateFeeType, 'late_fee_amount': double.tryParse(otcLateFeeAmountCtrl.text.trim()) ?? 0};
                 if (applyType == 'individual') {
                   final flatAmounts = <String, double>{};
                   for (final entry in flatAmountCtrls.entries) {

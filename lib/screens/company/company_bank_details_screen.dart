@@ -26,6 +26,7 @@ class _CompanyBankDetailsScreenState extends State<CompanyBankDetailsScreen> {
   String? _error;
   String? _existingQrUrl;
   XFile? _pickedQr;
+  Map<String, String> _fieldErrors = {};
 
   final _qrIdCtrl = TextEditingController();
   final _bankNameCtrl = TextEditingController();
@@ -88,8 +89,13 @@ class _CompanyBankDetailsScreenState extends State<CompanyBankDetailsScreen> {
             SnackBar(content: Text(LanguageService.t('bank_details_updated')), backgroundColor: Colors.green));
       }
       _pickedQr = null;
+      _fieldErrors = {};
       _load();
     } catch (e) {
+      // Item 5/9: per-field messages, same treatment as the other forms.
+      if (e is ApiValidationException) {
+        setState(() => _fieldErrors = e.errors.map((k, v) => MapEntry(k, v.first)));
+      }
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red));
     } finally {
@@ -161,7 +167,7 @@ class _CompanyBankDetailsScreenState extends State<CompanyBankDetailsScreen> {
                     const SizedBox(height: 20),
                     AppFieldShell(accent: primary, child: TextField(
                       controller: _qrIdCtrl,
-                      decoration: appFieldDecoration(label: LanguageService.t('upi_id'), icon: Icons.tag, accent: primary, hint: 'company@okhdfcbank'),
+                      decoration: appFieldDecoration(label: LanguageService.t('upi_id'), icon: Icons.tag, accent: primary, hint: 'company@okhdfcbank').copyWith(errorText: _fieldErrors['qr_id']),
                     )),
                     const SizedBox(height: 22),
                     Row(children: [
@@ -174,27 +180,27 @@ class _CompanyBankDetailsScreenState extends State<CompanyBankDetailsScreen> {
                     const SizedBox(height: 14),
                     AppFieldShell(accent: BrandingService.secondary, child: TextField(
                       controller: _bankNameCtrl,
-                      decoration: appFieldDecoration(label: LanguageService.t('bank_name'), icon: Icons.account_balance, accent: BrandingService.secondary),
+                      decoration: appFieldDecoration(label: LanguageService.t('bank_name'), icon: Icons.account_balance, accent: BrandingService.secondary).copyWith(errorText: _fieldErrors['bank_name']),
                     )),
                     const SizedBox(height: 14),
                     AppFieldShell(accent: primary, child: TextField(
                       controller: _accountCtrl,
-                      decoration: appFieldDecoration(label: LanguageService.t('account_number'), icon: Icons.pin_outlined, accent: primary),
+                      decoration: appFieldDecoration(label: LanguageService.t('account_number'), icon: Icons.pin_outlined, accent: primary).copyWith(errorText: _fieldErrors['account_number']),
                     )),
                     const SizedBox(height: 14),
                     AppFieldShell(accent: BrandingService.secondary, child: TextField(
                       controller: _ifscCtrl,
-                      decoration: appFieldDecoration(label: LanguageService.t('ifsc_code'), icon: Icons.code, accent: BrandingService.secondary),
+                      decoration: appFieldDecoration(label: LanguageService.t('ifsc_code'), icon: Icons.code, accent: BrandingService.secondary).copyWith(errorText: _fieldErrors['ifsc_code']),
                     )),
                     const SizedBox(height: 14),
                     AppFieldShell(accent: primary, child: TextField(
                       controller: _swiftCtrl,
-                      decoration: appFieldDecoration(label: LanguageService.t('swift_code'), icon: Icons.public, accent: primary),
+                      decoration: appFieldDecoration(label: LanguageService.t('swift_code'), icon: Icons.public, accent: primary).copyWith(errorText: _fieldErrors['swift_code']),
                     )),
                     const SizedBox(height: 14),
                     AppFieldShell(accent: BrandingService.secondary, child: TextField(
                       controller: _branchCtrl,
-                      decoration: appFieldDecoration(label: LanguageService.t('branch_name'), icon: Icons.location_city_outlined, accent: BrandingService.secondary),
+                      decoration: appFieldDecoration(label: LanguageService.t('branch_name'), icon: Icons.location_city_outlined, accent: BrandingService.secondary).copyWith(errorText: _fieldErrors['branch_name']),
                     )),
                     const SizedBox(height: 24),
                     ElevatedButton.icon(

@@ -385,13 +385,28 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       ),
                     ),
                     const SizedBox(height: 14),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Text(BrandingService.appName,
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.2)),
+                    // Item 4: responsive/dynamic font size (not a single
+                    // fixed size for every device) - same technique as
+                    // splash_screen.dart's title: LayoutBuilder derives the
+                    // size from the available width, FittedBox is a safety
+                    // net that scales down further rather than clipping, so
+                    // the full app name always stays on one line with a
+                    // consistent left/right margin on any phone.
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final fontSize = (constraints.maxWidth / 11.2).clamp(15.0, 21.0);
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.center,
+                            child: Text(BrandingService.appName,
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 0.2)),
+                          ),
+                        );
+                      },
                     ),
                     if (BrandingService.appTagline != null && BrandingService.appTagline!.trim().isNotEmpty)
                       Padding(

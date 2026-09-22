@@ -5,6 +5,28 @@ import 'device_service.dart';
 import 'maintenance_service.dart';
 import '../main.dart' show router;
 
+/// Item 5/9: a 422 response carries a full field->messages map, but every
+/// call site used to only ever see the FIRST field's FIRST message as a
+/// plain Exception string (see the old _checkStatus 422 branch) - so a
+/// form with several things wrong ("name is required" AND "email is
+/// invalid") only ever showed the vaguest one, and never which field it
+/// was about. Forms that want to show a message under each field now
+/// catch this instead of a plain Exception and read [errors] directly.
+/// message/toString() still return the same first-message string as
+/// before, so any call site that hasn't been updated yet keeps working
+/// exactly as it did (this is a superset, not a breaking change).
+class ApiValidationException implements Exception {
+  final Map<String, List<String>> errors;
+  final String message;
+  ApiValidationException(this.errors, this.message);
+
+  /// First error for [field], or null if that field has none.
+  String? forField(String field) => errors[field]?.first;
+
+  @override
+  String toString() => 'Exception: $message';
+}
+
 class ApiService {
 	// Base URL is chosen at BUILD time via --dart-define, not hardcoded here,
 	// so a release build can never accidentally ship pointed at localhost.
@@ -151,9 +173,12 @@ class ApiService {
     }
     if (res.statusCode == 422) {
       final body = jsonDecode(res.body);
-      final errors = body['errors'] as Map?;
-      if (errors != null) {
-        throw Exception(errors.values.first is List ? errors.values.first[0] : errors.values.first);
+      final rawErrors = body['errors'] as Map?;
+      if (rawErrors != null) {
+        final errors = rawErrors.map((k, v) => MapEntry(
+            k.toString(), v is List ? v.map((e) => e.toString()).toList() : [v.toString()]));
+        final firstMsg = errors.values.first.first;
+        throw ApiValidationException(errors, firstMsg);
       }
       throw Exception(body['message'] ?? 'Validation error');
     }

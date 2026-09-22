@@ -56,6 +56,7 @@ class _CompanyAptAdminsScreenState extends State<CompanyAptAdminsScreen> {
     };
     bool saving = false;
     String? formError;
+    Map<String, String> fieldErrors = {};
 
     showModalBottomSheet(
       context: context,
@@ -85,7 +86,7 @@ class _CompanyAptAdminsScreenState extends State<CompanyAptAdminsScreen> {
               child: TextField(
                 controller: nameCtrl,
                 autofocus: true,
-                decoration: appFieldDecoration(label: LanguageService.t('name'), icon: Icons.person_outline, accent: BrandingService.primary),
+                decoration: appFieldDecoration(label: LanguageService.t('name'), icon: Icons.person_outline, accent: BrandingService.primary).copyWith(errorText: fieldErrors['name']),
               ),
             ),
             const SizedBox(height: 14),
@@ -94,7 +95,7 @@ class _CompanyAptAdminsScreenState extends State<CompanyAptAdminsScreen> {
               child: TextField(
                 controller: emailCtrl,
                 keyboardType: TextInputType.emailAddress,
-                decoration: appFieldDecoration(label: LanguageService.t('email_login'), icon: Icons.email_outlined, accent: BrandingService.secondary),
+                decoration: appFieldDecoration(label: LanguageService.t('email_login'), icon: Icons.email_outlined, accent: BrandingService.secondary).copyWith(errorText: fieldErrors['email']),
               ),
             ),
             const SizedBox(height: 14),
@@ -103,7 +104,7 @@ class _CompanyAptAdminsScreenState extends State<CompanyAptAdminsScreen> {
               child: TextField(
                 controller: phoneCtrl,
                 keyboardType: TextInputType.phone,
-                decoration: appFieldDecoration(label: LanguageService.t('phone'), icon: Icons.phone_outlined, accent: BrandingService.primary),
+                decoration: appFieldDecoration(label: LanguageService.t('phone'), icon: Icons.phone_outlined, accent: BrandingService.primary).copyWith(errorText: fieldErrors['phone']),
               ),
             ),
             const SizedBox(height: 14),
@@ -112,7 +113,7 @@ class _CompanyAptAdminsScreenState extends State<CompanyAptAdminsScreen> {
               child: TextField(
                 controller: passCtrl,
                 obscureText: true,
-                decoration: appFieldDecoration(label: isEdit ? LanguageService.t('new_password_optional') : LanguageService.t('password'), icon: Icons.lock_outline, accent: BrandingService.secondary),
+                decoration: appFieldDecoration(label: isEdit ? LanguageService.t('new_password_optional') : LanguageService.t('password'), icon: Icons.lock_outline, accent: BrandingService.secondary).copyWith(errorText: fieldErrors['password']),
               ),
             ),
             const SizedBox(height: 14),
@@ -167,7 +168,7 @@ class _CompanyAptAdminsScreenState extends State<CompanyAptAdminsScreen> {
                     setS(() => formError = LanguageService.t('select_at_least_one_apartment'));
                     return;
                   }
-                  setS(() { saving = true; formError = null; });
+                  setS(() { saving = true; formError = null; fieldErrors = {}; });
 
                   try {
                     if (isEdit) {
@@ -200,7 +201,15 @@ class _CompanyAptAdminsScreenState extends State<CompanyAptAdminsScreen> {
                     if (ctx.mounted) Navigator.pop(ctx);
                     _load();
                   } catch (e) {
-                    setS(() { saving = false; formError = e.toString().replaceAll('Exception: ', ''); });
+                    if (e is ApiValidationException) {
+                      setS(() {
+                        saving = false;
+                        fieldErrors = e.errors.map((k, v) => MapEntry(k, v.first));
+                        formError = LanguageService.t('please_fill_all_required_fields');
+                      });
+                    } else {
+                      setS(() { saving = false; formError = e.toString().replaceAll('Exception: ', ''); });
+                    }
                   }
                 },
             ),

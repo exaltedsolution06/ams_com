@@ -5,7 +5,10 @@ import '../../services/language_service.dart';
 import '../../services/drawer_state.dart';
 import '../../widgets/app_drawer.dart';
 import '../../widgets/ams_dialog.dart';
+import '../../widgets/app_form_field.dart';
+import '../../widgets/form_sheet.dart';
 import '../../widgets/empty_state.dart';
+import '../../utils/type_helpers.dart';
 
 class CompanySubscriptionsScreen extends StatefulWidget {
   const CompanySubscriptionsScreen({super.key});
@@ -15,6 +18,8 @@ class CompanySubscriptionsScreen extends StatefulWidget {
 
 class _CompanySubscriptionsScreenState extends State<CompanySubscriptionsScreen> {
   List _subscriptions = [];
+  List _apartments = [];
+  List _plans = [];
   bool _loading = true;
   String? _error;
 
@@ -27,7 +32,17 @@ class _CompanySubscriptionsScreenState extends State<CompanySubscriptionsScreen>
       final res = await ApiService().get('/company/subscriptions');
       dynamic data = res['data'];
       if (data is Map && data.containsKey('data')) data = data['data'];
-      setState(() { _subscriptions = List.from(data ?? []); _loading = false; });
+      // Item 1: also load this Company's own apartments + plans so
+      // "Assign Plan" below can offer a picker for both, instead of this
+      // page only ever showing subscriptions that already exist.
+      final aptsRes = await ApiService().get('/company/apartments');
+      final plansRes = await ApiService().get('/company/plans');
+      setState(() {
+        _subscriptions = List.from(data ?? []);
+        _apartments = List.from(aptsRes['data'] as List? ?? []);
+        _plans = List.from((plansRes['data'] as List? ?? []).where((p) => (p as Map)['is_active'] != false));
+        _loading = false;
+      });
     } catch (e) {
       setState(() { _error = e.toString().replaceAll('Exception: ', ''); _loading = false; });
     }
@@ -61,6 +76,125 @@ class _CompanySubscriptionsScreenState extends State<CompanySubscriptionsScreen>
     }
   }
 
+  /// Item 1: "In company app -> company login > Subscription page -> Not
+  /// have any option to assign plan on apartment." — directly assigns one
+  /// of this Company's own plans to one of its apartments (same
+  /// POST /company/plans/assign the website's Super-Admin-style assign
+  /// flow already uses), recording amount_paid/payment_reference and
+  /// activating the plan immediately.
+  void _showAssignForm() {
+    if (_apartments.isEmpty) {
+      AmsDialog.info(context, title: LanguageService.t('error'), message: LanguageService.t('no_apartments_yet'));
+      return;
+    }
+    if (_plans.isEmpty) {
+      AmsDialog.info(context, title: LanguageService.t('error'), message: LanguageService.t('no_plans_yet'));
+      return;
+    }
+    Map? selectedApartment = _apartments.first as Map;
+    Map? selectedPlan = _plans.first as Map;
+    final amountCtrl = TextEditingController(text: (selectedPlan['price'] ?? 0).toString());
+    final refCtrl = TextEditingController();
+    bool saving = false;
+    String? formError;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.of(ctx).viewInsets.bottom + 20),
+        child: StatefulBuilder(builder: (ctx, setS) => SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            FormSheetHeader(
+              icon: Icons.assignment_turned_in_outlined,
+              title: LanguageService.t('assign_plan'),
+              accent: BrandingService.primary,
+              onClose: () => Navigator.pop(ctx),
+            ),
+            FormErrorBanner(message: formError),
+            AppFieldShell(
+              accent: BrandingService.primary,
+              child: DropdownButtonFormField<int>(
+                value: selectedApartment?['id'] as int?,
+                isExpanded: true,
+                decoration: appFieldDecoration(label: LanguageService.t('apartment'), icon: Icons.apartment, accent: BrandingService.primary),
+                items: _apartments.map((a) => DropdownMenuItem(
+                  value: (a as Map)['id'] as int,
+                  child: Text(a['name'] as String? ?? '', overflow: TextOverflow.ellipsis),
+                )).toList(),
+                onChanged: (v) => setS(() => selectedApartment = _apartments.firstWhere((a) => (a as Map)['id'] == v) as Map),
+              ),
+            ),
+            const SizedBox(height: 14),
+            AppFieldShell(
+              accent: BrandingService.secondary,
+              child: DropdownButtonFormField<int>(
+                value: selectedPlan?['id'] as int?,
+                isExpanded: true,
+                decoration: appFieldDecoration(label: LanguageService.t('plan'), icon: Icons.card_membership_rounded, accent: BrandingService.secondary),
+                items: _plans.map((p) => DropdownMenuItem(
+                  value: (p as Map)['id'] as int,
+                  child: Text('${p['name']} · ${_money(p['price'])}', overflow: TextOverflow.ellipsis),
+                )).toList(),
+                onChanged: (v) => setS(() {
+                  selectedPlan = _plans.firstWhere((p) => (p as Map)['id'] == v) as Map;
+                  amountCtrl.text = (selectedPlan?['price'] ?? 0).toString();
+                }),
+              ),
+            ),
+            const SizedBox(height: 14),
+            AppFieldShell(
+              accent: BrandingService.primary,
+              child: TextField(
+                controller: amountCtrl,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: appFieldDecoration(label: LanguageService.t('amount_paid'), icon: Icons.currency_rupee, accent: BrandingService.primary),
+              ),
+            ),
+            const SizedBox(height: 14),
+            AppFieldShell(
+              accent: BrandingService.secondary,
+              child: TextField(
+                controller: refCtrl,
+                decoration: appFieldDecoration(label: LanguageService.t('payment_reference'), icon: Icons.receipt_long_outlined, accent: BrandingService.secondary),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              icon: saving
+                  ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.check_circle_outline),
+              label: Text(saving ? '' : LanguageService.t('assign_plan')),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: BrandingService.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              onPressed: saving ? null : () async {
+                if (selectedApartment == null || selectedPlan == null) return;
+                setS(() { saving = true; formError = null; });
+                try {
+                  await ApiService().post('/company/plans/assign', {
+                    'apartment_id': selectedApartment!['id'],
+                    'plan_id': selectedPlan!['id'],
+                    'amount_paid': toNum(amountCtrl.text),
+                    'payment_reference': refCtrl.text.trim(),
+                  });
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  _load();
+                } catch (e) {
+                  setS(() { saving = false; formError = e.toString().replaceAll('Exception: ', ''); });
+                }
+              },
+            ),
+          ]),
+        )),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final primary = BrandingService.primary;
@@ -69,6 +203,13 @@ class _CompanySubscriptionsScreenState extends State<CompanySubscriptionsScreen>
       drawer: const AppDrawer(),
       onDrawerChanged: DrawerVisibility.onChanged,
       appBar: AppBar(backgroundColor: primary, foregroundColor: Colors.white, title: Text(LanguageService.t('subscriptions'))),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _loading ? null : _showAssignForm,
+        backgroundColor: primary,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: Text(LanguageService.t('assign_plan')),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

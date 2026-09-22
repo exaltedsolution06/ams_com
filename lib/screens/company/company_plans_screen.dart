@@ -57,6 +57,7 @@ class _CompanyPlansScreenState extends State<CompanyPlansScreen> {
     final selectedModules = <String>{...(plan?['modules'] as List? ?? []).map((m) => m.toString())};
     bool saving = false;
     String? formError;
+    Map<String, String> fieldErrors = {};
 
     showModalBottomSheet(
       context: context,
@@ -86,7 +87,7 @@ class _CompanyPlansScreenState extends State<CompanyPlansScreen> {
               child: TextField(
                 controller: nameCtrl,
                 autofocus: true,
-                decoration: appFieldDecoration(label: LanguageService.t('plan_name'), icon: Icons.card_membership_rounded, accent: BrandingService.primary),
+                decoration: appFieldDecoration(label: LanguageService.t('plan_name'), icon: Icons.card_membership_rounded, accent: BrandingService.primary).copyWith(errorText: fieldErrors['name']),
               ),
             ),
             if (!isEdit) ...[
@@ -95,7 +96,7 @@ class _CompanyPlansScreenState extends State<CompanyPlansScreen> {
                 accent: BrandingService.secondary,
                 child: TextField(
                   controller: slugCtrl,
-                  decoration: appFieldDecoration(label: LanguageService.t('slug_e_g_yearly_pro'), icon: Icons.tag, accent: BrandingService.secondary),
+                  decoration: appFieldDecoration(label: LanguageService.t('slug_e_g_yearly_pro'), icon: Icons.tag, accent: BrandingService.secondary).copyWith(errorText: fieldErrors['slug']),
                 ),
               ),
             ],
@@ -104,21 +105,21 @@ class _CompanyPlansScreenState extends State<CompanyPlansScreen> {
               Expanded(
                 child: AppFieldShell(
                   accent: BrandingService.primary,
-                  child: TextField(controller: priceCtrl, keyboardType: TextInputType.number, decoration: appFieldDecoration(label: LanguageService.t('price_currency'), icon: Icons.currency_rupee, accent: BrandingService.primary)),
+                  child: TextField(controller: priceCtrl, keyboardType: TextInputType.number, decoration: appFieldDecoration(label: LanguageService.t('price_currency'), icon: Icons.currency_rupee, accent: BrandingService.primary).copyWith(errorText: fieldErrors['price'])),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: AppFieldShell(
                   accent: BrandingService.secondary,
-                  child: TextField(controller: durationCtrl, keyboardType: TextInputType.number, decoration: appFieldDecoration(label: LanguageService.t('duration_days'), icon: Icons.event_repeat_outlined, accent: BrandingService.secondary)),
+                  child: TextField(controller: durationCtrl, keyboardType: TextInputType.number, decoration: appFieldDecoration(label: LanguageService.t('duration_days'), icon: Icons.event_repeat_outlined, accent: BrandingService.secondary).copyWith(errorText: fieldErrors['duration_days'])),
                 ),
               ),
             ]),
             const SizedBox(height: 14),
             AppFieldShell(
               accent: BrandingService.primary,
-              child: TextField(controller: maxFlatsCtrl, keyboardType: TextInputType.number, decoration: appFieldDecoration(label: LanguageService.t('max_flats_0_unlimited'), icon: Icons.door_front_door_outlined, accent: BrandingService.primary)),
+              child: TextField(controller: maxFlatsCtrl, keyboardType: TextInputType.number, decoration: appFieldDecoration(label: LanguageService.t('max_flats_0_unlimited'), icon: Icons.door_front_door_outlined, accent: BrandingService.primary).copyWith(errorText: fieldErrors['max_flats'])),
             ),
             const SizedBox(height: 14),
             AppFieldShell(
@@ -160,7 +161,7 @@ class _CompanyPlansScreenState extends State<CompanyPlansScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
               onPressed: saving ? null : () async {
-                  setS(() { saving = true; formError = null; });
+                  setS(() { saving = true; formError = null; fieldErrors = {}; });
                   try {
                     final payload = {
                       'name': nameCtrl.text.trim(),
@@ -178,7 +179,15 @@ class _CompanyPlansScreenState extends State<CompanyPlansScreen> {
                     if (ctx.mounted) Navigator.pop(ctx);
                     _load();
                   } catch (e) {
-                    setS(() { saving = false; formError = e.toString().replaceAll('Exception: ', ''); });
+                    if (e is ApiValidationException) {
+                      setS(() {
+                        saving = false;
+                        fieldErrors = e.errors.map((k, v) => MapEntry(k, v.first));
+                        formError = LanguageService.t('please_fill_all_required_fields');
+                      });
+                    } else {
+                      setS(() { saving = false; formError = e.toString().replaceAll('Exception: ', ''); });
+                    }
                   }
                 },
             ),

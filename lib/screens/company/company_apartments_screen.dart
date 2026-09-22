@@ -91,6 +91,11 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
     XFile? pickedLogo;
     bool saving = false;
     String? formError;
+    // Item 5: field -> error message, shown under that specific field
+    // instead of one generic "Please fill all required fields" banner -
+    // populated either by the client-side required check below, or from
+    // ApiValidationException.errors when the server rejects the submit.
+    Map<String, String> fieldErrors = {};
 
     showModalBottomSheet(
       context: context,
@@ -120,7 +125,7 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
               child: TextField(
                 controller: nameCtrl,
                 autofocus: true,
-                decoration: appFieldDecoration(label: LanguageService.t('apartment_name'), icon: Icons.apartment, accent: BrandingService.primary),
+                decoration: appFieldDecoration(label: LanguageService.t('apartment_name'), icon: Icons.apartment, accent: BrandingService.primary).copyWith(errorText: fieldErrors['name']),
               ),
             ),
             const SizedBox(height: 14),
@@ -130,7 +135,7 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
                 value: type,
                 items: _kAptTypes.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
                 onChanged: (v) => setS(() => type = v ?? type),
-                decoration: appFieldDecoration(label: LanguageService.t('structure'), icon: Icons.layers_outlined, accent: BrandingService.secondary),
+                decoration: appFieldDecoration(label: LanguageService.t('structure'), icon: Icons.layers_outlined, accent: BrandingService.secondary).copyWith(errorText: fieldErrors['apartment_type']),
               ),
             ),
             const SizedBox(height: 14),
@@ -139,7 +144,7 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
               child: TextField(
                 controller: addressCtrl,
                 maxLines: 2,
-                decoration: appFieldDecoration(label: LanguageService.t('address'), icon: Icons.location_on_outlined, accent: BrandingService.primary).copyWith(alignLabelWithHint: true),
+                decoration: appFieldDecoration(label: LanguageService.t('address'), icon: Icons.location_on_outlined, accent: BrandingService.primary).copyWith(alignLabelWithHint: true, errorText: fieldErrors['address']),
               ),
             ),
             const SizedBox(height: 14),
@@ -152,7 +157,7 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
                     .map((c) => DropdownMenuItem(value: c['name'] as String, child: Text(c['name'] as String, overflow: TextOverflow.ellipsis)))
                     .toList(),
                 onChanged: (v) => setS(() => country = v),
-                decoration: appFieldDecoration(label: LanguageService.t('country'), icon: Icons.public_outlined, accent: BrandingService.secondary),
+                decoration: appFieldDecoration(label: LanguageService.t('country'), icon: Icons.public_outlined, accent: BrandingService.secondary).copyWith(errorText: fieldErrors['country']),
               ),
             ),
             const SizedBox(height: 14),
@@ -160,14 +165,14 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
               Expanded(
                 child: AppFieldShell(
                   accent: BrandingService.secondary,
-                  child: TextField(controller: cityCtrl, decoration: appFieldDecoration(label: LanguageService.t('city'), icon: Icons.location_city_outlined, accent: BrandingService.secondary)),
+                  child: TextField(controller: cityCtrl, decoration: appFieldDecoration(label: LanguageService.t('city'), icon: Icons.location_city_outlined, accent: BrandingService.secondary).copyWith(errorText: fieldErrors['city'])),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: AppFieldShell(
                   accent: BrandingService.primary,
-                  child: TextField(controller: stateCtrl, decoration: appFieldDecoration(label: LanguageService.t('state'), icon: Icons.map_outlined, accent: BrandingService.primary)),
+                  child: TextField(controller: stateCtrl, decoration: appFieldDecoration(label: LanguageService.t('state'), icon: Icons.map_outlined, accent: BrandingService.primary).copyWith(errorText: fieldErrors['state'])),
                 ),
               ),
             ]),
@@ -177,7 +182,7 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
               child: TextField(
                 controller: pincodeCtrl,
                 keyboardType: TextInputType.number,
-                decoration: appFieldDecoration(label: LanguageService.t('pincode'), icon: Icons.pin_drop_outlined, accent: BrandingService.secondary),
+                decoration: appFieldDecoration(label: LanguageService.t('pincode'), icon: Icons.pin_drop_outlined, accent: BrandingService.secondary).copyWith(errorText: fieldErrors['pincode']),
               ),
             ),
             const SizedBox(height: 20),
@@ -185,17 +190,17 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
             const SizedBox(height: 10),
             AppFieldShell(
               accent: BrandingService.primary,
-              child: TextField(controller: contactNameCtrl, decoration: appFieldDecoration(label: LanguageService.t('contact_name'), icon: Icons.person_outline, accent: BrandingService.primary)),
+              child: TextField(controller: contactNameCtrl, decoration: appFieldDecoration(label: LanguageService.t('contact_name'), icon: Icons.person_outline, accent: BrandingService.primary).copyWith(errorText: fieldErrors['contact_name'])),
             ),
             const SizedBox(height: 14),
             AppFieldShell(
               accent: BrandingService.secondary,
-              child: TextField(controller: contactPhoneCtrl, keyboardType: TextInputType.phone, decoration: appFieldDecoration(label: LanguageService.t('contact_phone'), icon: Icons.phone_outlined, accent: BrandingService.secondary)),
+              child: TextField(controller: contactPhoneCtrl, keyboardType: TextInputType.phone, decoration: appFieldDecoration(label: LanguageService.t('contact_phone'), icon: Icons.phone_outlined, accent: BrandingService.secondary).copyWith(errorText: fieldErrors['contact_phone'])),
             ),
             const SizedBox(height: 14),
             AppFieldShell(
               accent: BrandingService.primary,
-              child: TextField(controller: contactEmailCtrl, keyboardType: TextInputType.emailAddress, decoration: appFieldDecoration(label: LanguageService.t('contact_email'), icon: Icons.email_outlined, accent: BrandingService.primary)),
+              child: TextField(controller: contactEmailCtrl, keyboardType: TextInputType.emailAddress, decoration: appFieldDecoration(label: LanguageService.t('contact_email'), icon: Icons.email_outlined, accent: BrandingService.primary).copyWith(errorText: fieldErrors['contact_email'])),
             ),
             const SizedBox(height: 14),
             // Logo - optional, same as the website's Add Apartment form.
@@ -275,13 +280,27 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
               onPressed: saving ? null : () async {
-                  if (nameCtrl.text.trim().isEmpty || addressCtrl.text.trim().isEmpty ||
-                      (country == null || country!.isEmpty) ||
-                      cityCtrl.text.trim().isEmpty || stateCtrl.text.trim().isEmpty || pincodeCtrl.text.trim().isEmpty) {
-                    setS(() => formError = LanguageService.t('please_fill_all_required_fields'));
+                  // Item 5: per-field messages instead of one generic
+                  // "Please fill all required fields" banner - only the
+                  // fields that are actually empty get an error, under
+                  // that field.
+                  final required = <String, String>{
+                    'name': nameCtrl.text.trim(),
+                    'address': addressCtrl.text.trim(),
+                    'country': country ?? '',
+                    'city': cityCtrl.text.trim(),
+                    'state': stateCtrl.text.trim(),
+                    'pincode': pincodeCtrl.text.trim(),
+                  };
+                  final clientErrors = <String, String>{
+                    for (final e in required.entries)
+                      if (e.value.isEmpty) e.key: LanguageService.t('this_field_is_required'),
+                  };
+                  if (clientErrors.isNotEmpty) {
+                    setS(() { fieldErrors = clientErrors; formError = LanguageService.t('please_fill_all_required_fields'); });
                     return;
                   }
-                  setS(() { saving = true; formError = null; });
+                  setS(() { saving = true; formError = null; fieldErrors = {}; });
                   final fields = <String, String>{
                     'name': nameCtrl.text.trim(),
                     'apartment_type': type,
@@ -313,7 +332,19 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
                     if (ctx.mounted) Navigator.pop(ctx);
                     _load();
                   } catch (e) {
-                    setS(() { saving = false; formError = e.toString().replaceAll('Exception: ', ''); });
+                    // Item 5: a server-side validation failure (422) shows
+                    // each field's own message under that field, same as
+                    // the client-side check above - not just the first one
+                    // in a single generic banner.
+                    if (e is ApiValidationException) {
+                      setS(() {
+                        saving = false;
+                        fieldErrors = e.errors.map((k, v) => MapEntry(k, v.first));
+                        formError = LanguageService.t('please_fill_all_required_fields');
+                      });
+                    } else {
+                      setS(() { saving = false; formError = e.toString().replaceAll('Exception: ', ''); });
+                    }
                   }
                 },
             ),

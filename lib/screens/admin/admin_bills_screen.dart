@@ -493,6 +493,26 @@ class _AdminBillsScreenState extends State<AdminBillsScreen>
             ]),
             const SizedBox(height: 16),
             FormErrorBanner(message: formError),
+            // Item 12: shown separately, not folded into the outstanding figure.
+            if (bill['late_fee_enabled'] == true && double.tryParse(bill['late_fee']?.toString() ?? '0') != null && double.parse(bill['late_fee'].toString()) > 0) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(color: Colors.red[50], borderRadius: BorderRadius.circular(10)),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                    Text(LanguageService.t('original_bill_amount'), style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                    Text('${BrandingService.currencySymbol}${_fmt(bill['base_amount'])}', style: const TextStyle(fontSize: 12)),
+                  ]),
+                  const SizedBox(height: 3),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                    Text(LanguageService.t('accumulated_late_fee'), style: const TextStyle(fontSize: 12, color: Colors.red)),
+                    Text('${BrandingService.currencySymbol}${_fmt(bill['late_fee'])}', style: const TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w600)),
+                  ]),
+                ]),
+              ),
+            ],
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -708,6 +728,16 @@ class _AdminBillsScreenState extends State<AdminBillsScreen>
                                 Expanded(child: _AmtTile(label: LanguageService.t('due'),   value: '${BrandingService.currencySymbol}${_fmt(b['outstanding'])}',  color: status == 'paid' ? Colors.green : Colors.red)),
                               ]),
                             ),
+                            // Item 12: shown separately, not folded into Total above.
+                            if (b['late_fee_enabled'] == true && (double.tryParse(b['late_fee']?.toString() ?? '0') ?? 0) > 0) ...[
+                              const SizedBox(height: 6),
+                              Row(children: [
+                                const Icon(Icons.warning_amber_rounded, size: 13, color: Colors.red),
+                                const SizedBox(width: 4),
+                                Text('${LanguageService.t('accumulated_late_fee')}: ${BrandingService.currencySymbol}${_fmt(b['late_fee'])}',
+                                    style: const TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.w600)),
+                              ]),
+                            ],
                             if (status != 'paid') ...[
                               const SizedBox(height: 10),
                               SizedBox(

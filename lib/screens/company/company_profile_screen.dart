@@ -17,6 +17,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
   bool _loading = true;
   bool _saving = false;
   String? _error;
+  Map<String, String> _fieldErrors = {};
 
   final _nameCtrl = TextEditingController();
   final _contactNameCtrl = TextEditingController();
@@ -66,11 +67,19 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
         'state': _stateCtrl.text.trim(),
         'pincode': _pincodeCtrl.text.trim(),
       });
-      setState(() => _saving = false);
+      setState(() { _saving = false; _fieldErrors = {}; });
       if (mounted) AmsDialog.info(context, title: LanguageService.t('saved'), message: LanguageService.t('company_profile_updated'));
     } catch (e) {
-      setState(() => _saving = false);
-      if (mounted) AmsDialog.info(context, title: LanguageService.t('error'), message: e.toString().replaceAll('Exception: ', ''));
+      // Item 5/9: same per-field-message treatment as the Add Apartment
+      // form - a 422 now maps each field's own error under that field,
+      // not just the first one in the popup.
+      if (e is ApiValidationException) {
+        setState(() { _saving = false; _fieldErrors = e.errors.map((k, v) => MapEntry(k, v.first)); });
+        if (mounted) AmsDialog.info(context, title: LanguageService.t('error'), message: LanguageService.t('please_fill_all_required_fields'));
+      } else {
+        setState(() => _saving = false);
+        if (mounted) AmsDialog.info(context, title: LanguageService.t('error'), message: e.toString().replaceAll('Exception: ', ''));
+      }
     }
   }
 
@@ -130,7 +139,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
                       accent: BrandingService.primary,
                       child: TextField(
                         controller: _nameCtrl,
-                        decoration: appFieldDecoration(label: LanguageService.t('company_name'), icon: Icons.corporate_fare, accent: BrandingService.primary),
+                        decoration: appFieldDecoration(label: LanguageService.t('company_name'), icon: Icons.corporate_fare, accent: BrandingService.primary).copyWith(errorText: _fieldErrors['name']),
                       ),
                     ),
                     const SizedBox(height: 22),
@@ -146,7 +155,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
                       accent: BrandingService.secondary,
                       child: TextField(
                         controller: _contactNameCtrl,
-                        decoration: appFieldDecoration(label: LanguageService.t('contact_name'), icon: Icons.person_outline, accent: BrandingService.secondary),
+                        decoration: appFieldDecoration(label: LanguageService.t('contact_name'), icon: Icons.person_outline, accent: BrandingService.secondary).copyWith(errorText: _fieldErrors['contact_name']),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -155,7 +164,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
                       child: TextField(
                         controller: _contactPhoneCtrl,
                         keyboardType: TextInputType.phone,
-                        decoration: appFieldDecoration(label: LanguageService.t('contact_phone'), icon: Icons.phone_outlined, accent: BrandingService.primary),
+                        decoration: appFieldDecoration(label: LanguageService.t('contact_phone'), icon: Icons.phone_outlined, accent: BrandingService.primary).copyWith(errorText: _fieldErrors['contact_phone']),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -164,7 +173,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
                       child: TextField(
                         controller: _contactEmailCtrl,
                         keyboardType: TextInputType.emailAddress,
-                        decoration: appFieldDecoration(label: LanguageService.t('contact_email'), icon: Icons.email_outlined, accent: BrandingService.secondary),
+                        decoration: appFieldDecoration(label: LanguageService.t('contact_email'), icon: Icons.email_outlined, accent: BrandingService.secondary).copyWith(errorText: _fieldErrors['contact_email']),
                       ),
                     ),
                     const SizedBox(height: 22),
@@ -181,7 +190,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
                       child: TextField(
                         controller: _addressCtrl,
                         maxLines: 2,
-                        decoration: appFieldDecoration(label: LanguageService.t('address'), icon: Icons.home_outlined, accent: BrandingService.primary).copyWith(alignLabelWithHint: true),
+                        decoration: appFieldDecoration(label: LanguageService.t('address'), icon: Icons.home_outlined, accent: BrandingService.primary).copyWith(alignLabelWithHint: true, errorText: _fieldErrors['address']),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -189,14 +198,14 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
                       Expanded(
                         child: AppFieldShell(
                           accent: BrandingService.secondary,
-                          child: TextField(controller: _cityCtrl, decoration: appFieldDecoration(label: LanguageService.t('city'), icon: Icons.location_city_outlined, accent: BrandingService.secondary)),
+                          child: TextField(controller: _cityCtrl, decoration: appFieldDecoration(label: LanguageService.t('city'), icon: Icons.location_city_outlined, accent: BrandingService.secondary).copyWith(errorText: _fieldErrors['city'])),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: AppFieldShell(
                           accent: BrandingService.primary,
-                          child: TextField(controller: _stateCtrl, decoration: appFieldDecoration(label: LanguageService.t('state'), icon: Icons.map_outlined, accent: BrandingService.primary)),
+                          child: TextField(controller: _stateCtrl, decoration: appFieldDecoration(label: LanguageService.t('state'), icon: Icons.map_outlined, accent: BrandingService.primary).copyWith(errorText: _fieldErrors['state'])),
                         ),
                       ),
                     ]),
@@ -206,7 +215,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
                       child: TextField(
                         controller: _pincodeCtrl,
                         keyboardType: TextInputType.number,
-                        decoration: appFieldDecoration(label: LanguageService.t('pincode'), icon: Icons.pin_drop_outlined, accent: BrandingService.secondary),
+                        decoration: appFieldDecoration(label: LanguageService.t('pincode'), icon: Icons.pin_drop_outlined, accent: BrandingService.secondary).copyWith(errorText: _fieldErrors['pincode']),
                       ),
                     ),
                     const SizedBox(height: 24),

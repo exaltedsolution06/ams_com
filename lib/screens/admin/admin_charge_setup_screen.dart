@@ -72,6 +72,12 @@ class _AdminChargeSetupScreenState extends State<AdminChargeSetupScreen> {
     String frequency = charge?['frequency'] as String? ?? 'monthly';
     final isEdit     = charge != null;
     String? formError;
+    // Items 11-13: Late Fee + Auto Generate Bill.
+    bool lateFeeEnabled = charge != null ? toBool(charge['late_fee_enabled']) : false;
+    final graceDaysCtrl = TextEditingController(text: (charge?['late_fee_grace_days'] ?? 0).toString());
+    String lateFeeType = charge?['late_fee_type'] as String? ?? 'fixed';
+    final lateFeeAmountCtrl = TextEditingController(text: (charge?['late_fee_amount'] ?? 0).toString());
+    bool autoGenerateBill = charge != null ? toBool(charge['auto_generate_bill']) : false;
 
     showModalBottomSheet(
       context: context,
@@ -210,6 +216,90 @@ class _AdminChargeSetupScreenState extends State<AdminChargeSetupScreen> {
                     activeColor: BrandingService.primary),
               ]),
             ),
+            const SizedBox(height: 14),
+
+            // Item 13: Bill Auto Generation
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey[300]!)),
+              child: Row(children: [
+                const Icon(Icons.event_repeat_outlined, color: Colors.grey),
+                const SizedBox(width: 12),
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(LanguageService.t('auto_generate_bill'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                    Text(LanguageService.t('auto_generate_bill_hint'), style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  ],
+                )),
+                Switch(
+                    value: autoGenerateBill,
+                    onChanged: (v) => setS(() => autoGenerateBill = v),
+                    activeColor: BrandingService.primary),
+              ]),
+            ),
+            const SizedBox(height: 14),
+
+            // Items 11/12: Late Fee Logic
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey[300]!)),
+              child: Row(children: [
+                const Icon(Icons.warning_amber_rounded, color: Colors.grey),
+                const SizedBox(width: 12),
+                Expanded(child: Text(LanguageService.t('late_fee'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500))),
+                Switch(
+                    value: lateFeeEnabled,
+                    onChanged: (v) => setS(() => lateFeeEnabled = v),
+                    activeColor: BrandingService.primary),
+              ]),
+            ),
+            if (lateFeeEnabled) ...[
+              const SizedBox(height: 12),
+              AppFieldShell(
+                accent: Colors.orange,
+                child: TextField(
+                  controller: graceDaysCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: appFieldDecoration(label: LanguageService.t('grace_period_days'), icon: Icons.hourglass_bottom, accent: Colors.orange),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(
+                  child: ChoiceChip(
+                    label: Text(LanguageService.t('fixed_amount')),
+                    selected: lateFeeType == 'fixed',
+                    onSelected: (_) => setS(() => lateFeeType = 'fixed'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ChoiceChip(
+                    label: Text(LanguageService.t('percentage')),
+                    selected: lateFeeType == 'percentage',
+                    onSelected: (_) => setS(() => lateFeeType = 'percentage'),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 12),
+              AppFieldShell(
+                accent: Colors.orange,
+                child: TextField(
+                  controller: lateFeeAmountCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: appFieldDecoration(label: LanguageService.t('late_fee_amount_per_month'), icon: Icons.currency_rupee, accent: Colors.orange),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(LanguageService.t('late_fee_hint'), style: const TextStyle(fontSize: 11, color: Colors.grey)),
+            ],
             const SizedBox(height: 20),
 
             // Submit
@@ -246,6 +336,11 @@ class _AdminChargeSetupScreenState extends State<AdminChargeSetupScreen> {
                     'frequency':   frequency,
                     'description': descCtrl.text.trim(),
                     'is_active':   isActive,
+                    'late_fee_enabled':    lateFeeEnabled,
+                    'late_fee_grace_days': int.tryParse(graceDaysCtrl.text.trim()) ?? 0,
+                    'late_fee_type':       lateFeeType,
+                    'late_fee_amount':     double.tryParse(lateFeeAmountCtrl.text.trim()) ?? 0,
+                    'auto_generate_bill':  autoGenerateBill,
                   };
                   if (isEdit) {
                     await ApiService().put('/admin/maintenance-charges/${charge!['id']}', body);
@@ -511,9 +606,14 @@ class _AdminChargeSetupScreenState extends State<AdminChargeSetupScreen> {
   String _fmt(dynamic v) {
     if (v == null) return '0';
     final d = double.tryParse(v.toString()) ?? 0;
-    if (d >= 100000) return '${(d / 100000).toStringAsFixed(1)}L';
-    if (d >= 1000)   return '${(d / 1000).toStringAsFixed(1)}K';
-    return d.toStringAsFixed(0);
+    final n = d.round();
+    final digits = n.abs().toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < digits.length; i++) {
+      if (i > 0 && (digits.length - i) % 3 == 0) buf.write(',');
+      buf.write(digits[i]);
+    }
+    return (n < 0 ? '-' : '') + buf.toString();
   }
 }
 
