@@ -124,7 +124,10 @@ class _CompanyBankDetailsScreenState extends State<CompanyBankDetailsScreen> {
                   const SizedBox(height: 12),
                   ElevatedButton(onPressed: _load, child: Text(LanguageService.t('retry'))),
                 ]))
-              : SingleChildScrollView(
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                     Container(
@@ -216,6 +219,7 @@ class _CompanyBankDetailsScreenState extends State<CompanyBankDetailsScreen> {
                       onPressed: _saving ? null : _save,
                     ),
                   ]),
+                  ),
                 ),
     );
   }

@@ -62,7 +62,10 @@ class _CmsPageScreenState extends State<CmsPageScreen> {
                     ]),
                   ),
                 )
-              : SingleChildScrollView(
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(20),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     if (_updatedAt != null)
@@ -74,6 +77,7 @@ class _CmsPageScreenState extends State<CmsPageScreen> {
                     Text(_content ?? '', style: const TextStyle(fontSize: 14, height: 1.6)),
                     const SizedBox(height: 24),
                   ]),
+                  ),
                 ),
     );
   }

@@ -61,7 +61,11 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
               ? Center(child: Text(_error!, style: const TextStyle(color: Colors.grey)))
               : Column(children: [
                   Expanded(
-                    child: ListView(padding: const EdgeInsets.all(16), children: [
+                    child: RefreshIndicator(
+                      onRefresh: _load,
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(16), children: [
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(16),
@@ -110,7 +114,8 @@ class _ForumThreadScreenState extends State<ForumThreadScreen> {
                           );
                         }),
                     ]),
-                  ),
+                      ),
+                    ),
                   SafeArea(
                     top: false,
                     child: locked

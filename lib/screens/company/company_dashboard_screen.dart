@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 import '../../services/branding_service.dart';
 import '../../services/language_service.dart';
 import '../../services/drawer_state.dart';
@@ -73,6 +74,11 @@ class _CompanyDashboardScreenState extends State<CompanyDashboardScreen> {
       // screen's old plain AppBar with no bottom nav at all.
       bottomNavigationBar: AppBottomNav(
         currentRoute: '/company/dashboard',
+        // Same width auto-adjust as ams_app's dashboards: when the voice
+        // mic is enabled for this account, the pill narrows on the left
+        // to leave room for the mic button docking there (see
+        // VoiceCommandOverlay); otherwise it uses the normal edge inset.
+        leftInset: (BrandingService.voiceMicEnabled && AuthService.wantsVoiceMic) ? 64 : 12,
         items: [
           NavItem(icon: Icons.home_rounded,               label: LanguageService.t('home'),             route: '/company/dashboard', isHome: true),
           NavItem(icon: Icons.apartment_rounded,           label: LanguageService.t('my_apartments'),    route: '/company/apartments'),

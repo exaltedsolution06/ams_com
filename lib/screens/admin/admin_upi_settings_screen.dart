@@ -81,7 +81,10 @@ class _State extends State<AdminUpiSettingsScreen> {
                   const SizedBox(height: 12),
                   ElevatedButton(onPressed: _load, child: Text(LanguageService.t('retry'))),
                 ]))
-              : SingleChildScrollView(
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                     Container(
@@ -122,6 +125,7 @@ class _State extends State<AdminUpiSettingsScreen> {
                       style: ElevatedButton.styleFrom(backgroundColor: BrandingService.primary, padding: const EdgeInsets.symmetric(vertical: 14)),
                     ),
                   ]),
+                  ),
                 ),
     );
   }

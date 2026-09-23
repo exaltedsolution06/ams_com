@@ -161,7 +161,10 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                     ElevatedButton(onPressed: _load, child: Text(LanguageService.t('retry'))),
                   ]),
                 )
-              : ListView(
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
                   children: [
                     Card(
@@ -340,6 +343,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                       ],
                     ],
                   ],
+                  ),
                 ),
     );
   }

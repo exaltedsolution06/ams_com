@@ -246,7 +246,9 @@ class _BrandingState extends State<AdminBrandingScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _data == null
               ? Center(child: Text(LanguageService.t('unable_to_load_branding'), style: TextStyle(color: Colors.grey)))
-              : ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 90), children: [
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView(physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.fromLTRB(16, 16, 16, 90), children: [
                   // Logo
                   Center(
                     child: GestureDetector(
@@ -403,6 +405,7 @@ class _BrandingState extends State<AdminBrandingScreen> {
                     ]),
                   ),
                 ]),
+                ),
     );
   }
 }

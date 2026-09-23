@@ -103,7 +103,10 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(child: Text(_error!))
-              : SingleChildScrollView(
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                     // Identity header — a soft gradient banner instead of a
@@ -232,6 +235,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> {
                       onPressed: _saving ? null : _save,
                     ),
                   ]),
+                  ),
                 ),
     );
   }

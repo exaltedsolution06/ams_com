@@ -40,6 +40,14 @@ class _ProfileScreenState extends State<ProfileScreen>
   void initState() {
     super.initState();
     _tabs = TabController(length: 4, vsync: this);
+    // Re-fetch /me whenever the Profile or Settings tab becomes active
+    // (indices 0 and 3) so apartment-switch/linked-device/voice-mic
+    // changes made elsewhere show up here without needing a manual pull.
+    _tabs.addListener(() {
+      if (!_tabs.indexIsChanging && (_tabs.index == 0 || _tabs.index == 3)) {
+        _load();
+      }
+    });
     _load();
   }
 
@@ -626,7 +634,10 @@ class _ProfileScreenState extends State<ProfileScreen>
               controller: _tabs,
               children: [
                 // ── TAB 1: Profile ─────────────────────────────────────────
-                SingleChildScrollView(
+                RefreshIndicator(
+                  onRefresh: _load,
+                  child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
                   child: Column(children: [
                     CircleAvatar(
@@ -718,6 +729,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     _buildDeleteAccountSection(),
                     const SizedBox(height: 16),
                   ]),
+                  ),
                 ),
 
                 // ── TAB 2: Password ────────────────────────────────────────
@@ -774,7 +786,10 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildSettingsTab(Color primary, String role) {
-    return SingleChildScrollView(
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
       child: Column(children: [
         // Multi-apartment identity (Resident/Apartment Admin only) - only
@@ -810,6 +825,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           _buildDateFormatCard(primary),
         ],
       ]),
+      ),
     );
   }
 

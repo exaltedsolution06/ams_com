@@ -79,7 +79,10 @@ class _AdminTicketThreadScreenState extends State<AdminTicketThreadScreen> {
                     ]),
                   ),
                   Expanded(
-                    child: ListView(
+                    child: RefreshIndicator(
+                      onRefresh: _load,
+                      child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.all(16),
                       children: ((_ticket?['messages'] as List?) ?? []).map<Widget>((m) {
                         final isSuper = (m['user']?['role']) == 'super_admin';
@@ -112,6 +115,7 @@ class _AdminTicketThreadScreenState extends State<AdminTicketThreadScreen> {
                           ),
                         );
                       }).toList(),
+                      ),
                     ),
                   ),
                   if (_ticket?['status'] != 'closed')

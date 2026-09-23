@@ -629,13 +629,21 @@ class _AdminResidentsScreenState extends State<AdminResidentsScreen> {
         Expanded(
           child: _loading
               ? const Center(child: CircularProgressIndicator())
-              : _residents.isEmpty
-                  ? EmptyState(
-                      icon: Icons.people_outline,
-                      color: primary,
-                      title: LanguageService.t('no_residents_found'),
-                    )
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: _residents.isEmpty
+                  ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.55,
+                        child: EmptyState(
+                          icon: Icons.people_outline,
+                          color: primary,
+                          title: LanguageService.t('no_residents_found'),
+                        ),
+                      ),
+                    ])
                   : ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(12, 6, 12, 80),
                       itemCount: _residents.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 8),
@@ -698,6 +706,7 @@ class _AdminResidentsScreenState extends State<AdminResidentsScreen> {
                         );
                       },
                     ),
+                ),
         ),
       ]),
     );

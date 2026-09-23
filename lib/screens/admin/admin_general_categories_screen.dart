@@ -75,8 +75,13 @@ class _GCState extends State<AdminGeneralCategoriesScreen> {
     drawer: const AppDrawer(),
     onDrawerChanged: DrawerVisibility.onChanged,
     floatingActionButton: FloatingActionButton.extended(onPressed: () => _showForm(), icon: const Icon(Icons.add), label: Text(LanguageService.t('add_category')), backgroundColor: Colors.purple),
-    body: _loading ? const Center(child: CircularProgressIndicator()) : _error != null ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.error_outline, size: 48, color: Colors.grey), Text(_error!, style: const TextStyle(color: Colors.grey)), ElevatedButton(onPressed: _load, child: Text(LanguageService.t('retry')))])) : _cats.isEmpty ? EmptyState(icon: Icons.tag, title: LanguageService.t('no_categories_yet'), color: Colors.purple)
-        : ListView.separated(padding: const EdgeInsets.fromLTRB(12,12,12,90), itemCount: _cats.length, separatorBuilder: (_, __) => const SizedBox(height: 8),
+    body: _loading ? const Center(child: CircularProgressIndicator()) : _error != null ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.error_outline, size: 48, color: Colors.grey), Text(_error!, style: const TextStyle(color: Colors.grey)), ElevatedButton(onPressed: _load, child: Text(LanguageService.t('retry')))])) : RefreshIndicator(
+        onRefresh: _load,
+        child: _cats.isEmpty
+            ? ListView(physics: const AlwaysScrollableScrollPhysics(), children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.6, child: EmptyState(icon: Icons.tag, title: LanguageService.t('no_categories_yet'), color: Colors.purple)),
+              ])
+            : ListView.separated(physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.fromLTRB(12,12,12,90), itemCount: _cats.length, separatorBuilder: (_, __) => const SizedBox(height: 8),
             itemBuilder: (_, i) { final c = _cats[i] as Map; final active = toBool(c['is_active']);
               return Card(child: ListTile(leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.tag, color: Colors.purple, size: 20)),
                 title: Text(c['name'] as String? ?? '—', style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -87,5 +92,6 @@ class _GCState extends State<AdminGeneralCategoriesScreen> {
                 ]),
               ));
             }),
+      ),
   );
 }

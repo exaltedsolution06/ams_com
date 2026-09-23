@@ -195,7 +195,9 @@ class _AdminRulesScreenState extends State<AdminRulesScreen> {
                     ]),
                   ),
                   Expanded(
-                    child: ReorderableListView.builder(
+                    child: RefreshIndicator(
+                      onRefresh: _load,
+                      child: ReorderableListView.builder(
                       padding: const EdgeInsets.fromLTRB(12, 12, 12, 90),
                       itemCount: _blocks.length,
                       onReorder: _moveLine,
@@ -209,6 +211,7 @@ class _AdminRulesScreenState extends State<AdminRulesScreen> {
                         onChanged: () => setState(() {}),
                         onAddBelow: () => _addLine(afterIndex: i),
                         onDelete: () => _removeLine(i),
+                      ),
                       ),
                     ),
                   ),
