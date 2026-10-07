@@ -130,9 +130,32 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   build_runner: ^2.4.8
+  # App icon + native splash generators - config blocks at the bottom of this
+  # file. Run once after dropping in the files:
+  #   flutter pub get
+  #   dart run flutter_launcher_icons
+  #   dart run flutter_native_splash:create
+  flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.4
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/
     - assets/icons/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/app_icon.png"
+  remove_alpha_ios: true
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icons/app_icon_foreground.png"
+
+flutter_native_splash:
+  color: "#2563EB"
+  image: "assets/images/splash_logo.png"
+  android_12:
+    color: "#2563EB"
+    image: "assets/images/splash_logo.png"
+  fullscreen: true

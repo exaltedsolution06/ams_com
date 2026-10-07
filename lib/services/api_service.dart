@@ -283,6 +283,35 @@ class ApiService {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
+  /// Multipart POST that uploads a file already held in memory (as [bytes])
+  /// instead of reading it from a path. Needed for file_picker results on
+  /// Flutter Web, where there is no file path - only bytes - and also fine
+  /// on mobile when the picker was asked for `withData: true`
+  /// (see ApartmentImportSheet).
+  Future<Map<String, dynamic>> uploadMultipartBytes(
+    String path,
+    Map<String, String> fields, {
+    required List<int> bytes,
+    required String filename,
+    String fileField = 'file',
+  }) async {
+    path = await _withApartmentContext(path);
+    final uri = Uri.parse('$baseUrl$path');
+    final request = http.MultipartRequest('POST', uri);
+    final token = await AuthService().getToken();
+    if (token != null) request.headers['Authorization'] = 'Bearer $token';
+    request.headers['Accept'] = 'application/json';
+    request.fields.addAll(fields);
+    request.files.add(http.MultipartFile.fromBytes(fileField, bytes, filename: filename));
+    final streamed = await request.send().timeout(
+      const Duration(seconds: 180),
+      onTimeout: () => throw Exception('Upload timed out. A large file can take a while - please try again, or split the file into smaller parts.'),
+    );
+    final res = await http.Response.fromStream(streamed);
+    _checkStatus(res);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
   static bool _loggingOut = false;
 
   /// Clears the stale session and sends the user back to the login screen.

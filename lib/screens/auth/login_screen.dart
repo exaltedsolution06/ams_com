@@ -370,17 +370,18 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     ScaleTransition(
                       scale: _logoScale,
                       child: Container(
-                        width: 64,
-                        height: 64,
+                        width: 72,
+                        height: 72,
+                        padding: const EdgeInsets.all(3),
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
+                          borderRadius: BorderRadius.circular(18),
                           color: Colors.white,
                           border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
                           boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 14, offset: const Offset(0, 6))],
                         ),
                         clipBehavior: Clip.antiAlias,
-                        child: Image.asset('assets/images/default_logo.png', height: 64, width: 64, fit: BoxFit.cover,
+                        child: Image.asset('assets/images/default_logo.png', fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) => Icon(Icons.apartment_rounded, size: 32, color: BrandingService.primary)),
                       ),
                     ),

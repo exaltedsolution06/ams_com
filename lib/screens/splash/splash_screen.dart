@@ -48,9 +48,10 @@ class SplashScreen extends StatelessWidget {
                   Container(
                     width: 140,
                     height: 140,
+                    padding: const EdgeInsets.all(6),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(32),
                       color: Colors.white,
                       border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
                       boxShadow: [
@@ -60,9 +61,7 @@ class SplashScreen extends StatelessWidget {
                     clipBehavior: Clip.antiAlias,
                     child: Image.asset(
                       'assets/images/default_logo.png',
-                      height: 140,
-                      width: 140,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
                       errorBuilder: (_, __, ___) => const Icon(Icons.apartment_rounded, size: 68, color: _primary),
                     ),
                   ),

@@ -406,7 +406,8 @@ class _Header extends StatelessWidget {
                       errorBuilder: (_, __, ___) => Icon(Icons.apartment, color: primary, size: 15),
                     ),
                   )
-                : Icon(Icons.apartment, color: primary, size: 15),
+                : Image.asset('assets/images/default_logo.png', fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Icon(Icons.apartment, color: primary, size: 15)),
           ),
           const SizedBox(width: 8),
           Expanded(

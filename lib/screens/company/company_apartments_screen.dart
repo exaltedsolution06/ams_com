@@ -11,6 +11,7 @@ import '../../widgets/app_form_field.dart';
 import '../../widgets/form_sheet.dart';
 import '../../widgets/empty_state.dart';
 import '../../utils/type_helpers.dart';
+import 'company_apartment_import_sheet.dart';
 
 Map<String, String> get _kAptTypes => {
   'with_tower': LanguageService.t('with_towers'),
@@ -354,6 +355,23 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
     );
   }
 
+  /// Import Towers / Floors / Flats / Residents from a CSV - see
+  /// ApartmentImportSheet. [apartment] pre-selects that apartment (opened
+  /// from its row); null = pick one inside the sheet (opened from the app bar).
+  void _showImport({Map? apartment}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => ApartmentImportSheet(
+        apartments: _apartments,
+        initialApartmentId: apartment?['id'] as int?,
+        onImported: _load,
+      ),
+    );
+  }
+
   Future<void> _toggleActive(Map apt) async {
     try {
       await ApiService().put('/company/apartments/${apt['id']}', {
@@ -397,7 +415,18 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
       backgroundColor: const Color(0xFFF0F2F5),
       drawer: const AppDrawer(),
       onDrawerChanged: DrawerVisibility.onChanged,
-      appBar: AppBar(backgroundColor: primary, foregroundColor: Colors.white, title: Text(LanguageService.t('apartments'))),
+      appBar: AppBar(
+        backgroundColor: primary,
+        foregroundColor: Colors.white,
+        title: Text(LanguageService.t('apartments')),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.upload_file),
+            tooltip: 'Import data (CSV)',
+            onPressed: _apartments.isEmpty ? null : () => _showImport(),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showForm(),
         icon: const Icon(Icons.add),
@@ -456,6 +485,11 @@ class _CompanyApartmentsScreenState extends State<CompanyApartmentsScreen> {
                                         child: Icon(Icons.circle, size: 12, color: (a['is_active'] == true) ? Colors.green : Colors.grey),
                                       ),
                                     ),
+                                  ),
+                                  IconButton(
+                                    icon: Icon(Icons.upload_file, color: primary, size: 20),
+                                    tooltip: 'Import data (CSV)',
+                                    onPressed: () => _showImport(apartment: a as Map),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
